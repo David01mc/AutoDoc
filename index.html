@@ -3,1299 +3,1471 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AutoDoc para Claude Code — Documentación automática sin tokens extra</title>
-  <meta name="description" content="AutoDoc documenta automáticamente tus sesiones de Claude Code. Sin tokens extra. Sin esfuerzo manual. Python 3.8+." />
+  <title>AutoDoc — Documentación automática para Claude Code | 0 tokens extra</title>
+  <meta name="description" content="Hook gratuito que documenta automáticamente cada sesión de Claude Code. Sin tokens extra, sin esfuerzo. Diario Markdown estructurado. Open source." />
+  <meta property="og:title" content="AutoDoc — Documentación automática para Claude Code" />
+  <meta property="og:description" content="Hook gratuito. 0 tokens extra. Diario Markdown automático." />
+  <meta property="og:url" content="https://david01mc.github.io/autodoc" />
+  <link rel="canonical" href="https://david01mc.github.io/autodoc" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-deep:    #1a1a2e;
-      --bg-card:    #0f172a;
-      --bg-mid:     #16213e;
-      --bg-code:    #0d1117;
-      --accent:     #d97706;
-      --accent-lt:  #f59e0b;
-      --text:       #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim:   #64748b;
-      --border:     #1e293b;
-      --green:      #22c55e;
-      --red:        #ef4444;
-      --yellow:     #eab308;
-      --blue:       #3b82f6;
-      --purple:     #a78bfa;
-      --cyan:       #22d3ee;
-      --radius:     12px;
-      --radius-lg:  20px;
-      --shadow:     0 4px 32px rgba(0,0,0,0.4);
+      --bg:          #0a0a0f;
+      --bg-card:     #111118;
+      --bg-code:     #0d1117;
+      --border:      #1e1e2e;
+      --text:        #e2e8f0;
+      --text-muted:  #64748b;
+      --accent:      #6366f1;
+      --accent-2:    #8b5cf6;
+      --accent-glow: rgba(99,102,241,0.15);
+      --green:       #10b981;
+      --orange:      #f59e0b;
+      --red:         #ef4444;
+      --blue:        #3b82f6;
+      --accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
     }
 
     html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg-deep);
+      background: var(--bg);
       color: var(--text);
       line-height: 1.6;
       overflow-x: hidden;
     }
 
-    /* ─── SCROLLBAR ─── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-card); }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
 
-    /* ─── NAVBAR ─── */
+    /* ─── UTILITIES ─── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .accent-text { background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ─── NAV ─── */
     nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 2rem;
-      height: 64px;
-      background: rgba(26,26,46,0.75);
+      padding: 0 2rem; height: 60px;
+      background: rgba(10,10,15,0.8);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(217,119,6,0.15);
+      border-bottom: 1px solid rgba(99,102,241,0.1);
+      transition: border-color .3s;
     }
+    nav.scrolled { border-color: rgba(99,102,241,0.25); }
     .nav-logo {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 1.05rem; font-weight: 700; color: var(--text);
-      text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 1rem; font-weight: 600; color: var(--text);
+      text-decoration: none; letter-spacing: -0.02em;
     }
-    .nav-logo span { color: var(--accent-lt); }
-    .nav-links {
-      display: flex; align-items: center; gap: 1.5rem;
-      list-style: none;
-    }
+    .nav-logo .logo-bracket { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; list-style: none; }
     .nav-links a {
       color: var(--text-muted); text-decoration: none;
-      font-size: 0.9rem; font-weight: 500;
+      font-size: 0.875rem; font-weight: 500;
       transition: color .2s;
     }
-    .nav-links a:hover { color: var(--accent-lt); }
-    .nav-right { display: flex; align-items: center; gap: .75rem; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: .625rem; }
+    .nav-install-btn {
+      display: none; align-items: center; gap: 6px;
+      background: var(--accent-grad); color: #fff;
+      border: none; padding: 6px 14px; border-radius: 20px;
+      font-size: .8rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: filter .2s;
+    }
+    .nav-install-btn.visible { display: flex; }
+    .nav-install-btn:hover { filter: brightness(1.1); }
     .lang-btn {
       background: none; border: 1px solid var(--border);
-      color: var(--text-muted); padding: 5px 14px;
-      border-radius: 6px; cursor: pointer; font-size: .82rem;
+      color: var(--text-muted); padding: 5px 12px;
+      border-radius: 6px; cursor: pointer; font-size: .8rem;
       font-family: 'Inter', sans-serif; font-weight: 600;
-      transition: all .2s; display: flex; gap: 4px;
+      transition: all .2s; display: flex; gap: 3px;
     }
-    .lang-btn .lang-opt { opacity: .45; transition: opacity .2s; }
-    .lang-btn .lang-opt.active { opacity: 1; color: var(--accent-lt); }
+    .lang-btn .lo { opacity: .4; transition: opacity .2s; }
+    .lang-btn .lo.active { opacity: 1; color: var(--accent); }
     .lang-btn:hover { border-color: var(--accent); }
     .nav-github {
-      display: flex; align-items: center; gap: 7px;
+      display: flex; align-items: center; gap: 6px;
       background: var(--bg-card); border: 1px solid var(--border);
       color: var(--text); text-decoration: none;
-      padding: 7px 16px; border-radius: 8px; font-size: .85rem;
-      font-weight: 600; transition: all .2s;
+      padding: 6px 14px; border-radius: 8px;
+      font-size: .8rem; font-weight: 600;
+      transition: all .2s;
     }
-    .nav-github:hover { border-color: var(--accent); color: var(--accent-lt); }
+    .nav-github:hover { border-color: var(--accent); color: var(--accent); }
     .hamburger {
       display: none; background: none; border: none;
-      color: var(--text); font-size: 1.3rem; cursor: pointer;
+      color: var(--text); cursor: pointer; padding: 4px;
     }
-
-    /* ─── SECTIONS ─── */
-    section { padding: 6rem 1.5rem; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      display: inline-block;
-      background: rgba(217,119,6,.12);
-      color: var(--accent-lt);
-      border: 1px solid rgba(217,119,6,.25);
-      padding: 4px 14px; border-radius: 100px;
-      font-size: .75rem; font-weight: 700;
-      letter-spacing: .08em; text-transform: uppercase;
-      margin-bottom: 1.25rem;
+    .mobile-menu {
+      display: none; position: fixed;
+      top: 60px; left: 0; right: 0; z-index: 190;
+      background: rgba(10,10,15,0.97);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem; flex-direction: column; gap: .75rem;
     }
-    h2 { font-size: clamp(1.8rem,4vw,2.6rem); font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
-    h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
-    p { color: var(--text-muted); }
-
-    /* ─── FADE-IN ANIMATION ─── */
-    .fade-in { opacity: 0; transform: translateY(28px); transition: opacity .6s ease, transform .6s ease; }
-    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      color: var(--text-muted); text-decoration: none;
+      font-size: .9rem; font-weight: 500;
+      padding: .4rem 0;
+      transition: color .2s;
+    }
+    .mobile-menu a:hover { color: var(--text); }
 
     /* ─── HERO ─── */
     #hero {
-      min-height: 100vh;
-      display: flex; align-items: center;
-      padding-top: 100px;
-      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(217,119,6,.12) 0%, transparent 70%),
-                  var(--bg-deep);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 1.5rem 80px;
+      text-align: center;
+      position: relative; overflow: hidden;
     }
-    .hero-inner { text-align: center; }
+    #hero::before {
+      content: '';
+      position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: rgba(15,23,42,.8);
-      border: 1px solid rgba(217,119,6,.3);
-      padding: 8px 20px; border-radius: 100px;
-      font-size: .8rem; font-weight: 600; color: var(--text-muted);
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2);
+      color: var(--text-muted); padding: 6px 14px; border-radius: 20px;
+      font-size: .78rem; font-weight: 500; letter-spacing: .04em;
       margin-bottom: 2rem;
     }
-    .hero-badge .dot {
+    .hero-badge .pulse-dot {
       width: 7px; height: 7px; border-radius: 50%;
       background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s infinite;
+      animation: pulse-green 2s ease-in-out infinite;
     }
-    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
-    .hero-badge .sep { opacity: .3; }
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); opacity: 1; }
+      50% { box-shadow: 0 0 0 5px rgba(16,185,129,0); opacity: .8; }
+    }
     .hero-h1 {
-      font-size: clamp(2.2rem, 6vw, 4rem);
-      font-weight: 900; line-height: 1.1;
-      letter-spacing: -.02em;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      font-weight: 600; line-height: 1.15;
+      letter-spacing: -0.03em; margin-bottom: .5rem;
+    }
+    .hero-h1-line2 {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      font-weight: 600; line-height: 1.15;
+      letter-spacing: -0.03em;
+      background: var(--accent-grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; display: block;
       margin-bottom: 1.5rem;
     }
-    .hero-h1 .accent { color: var(--accent-lt); }
     .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      color: var(--text-muted);
-      max-width: 640px; margin: 0 auto 2.5rem;
-      font-weight: 400;
+      font-size: clamp(.95rem, 2vw, 1.15rem);
+      color: var(--text-muted); font-weight: 400;
+      max-width: 520px; margin: 0 auto 2.5rem;
     }
-    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .hero-ctas { display: flex; gap: .875rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
     .btn-primary {
-      display: inline-flex; align-items: center; gap: 9px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
-      color: #000; font-weight: 700; font-size: .95rem;
-      padding: 14px 28px; border-radius: 10px;
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent-grad); color: #fff;
+      padding: 12px 26px; border-radius: 10px;
+      font-size: .95rem; font-weight: 600;
       text-decoration: none; border: none; cursor: pointer;
-      transition: all .2s; box-shadow: 0 4px 20px rgba(217,119,6,.35);
+      transition: filter .2s, transform .2s;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.3);
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(217,119,6,.5); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 9px;
-      background: transparent;
-      border: 1.5px solid var(--border);
-      color: var(--text); font-weight: 600; font-size: .95rem;
-      padding: 14px 28px; border-radius: 10px;
-      text-decoration: none; cursor: pointer;
-      transition: all .2s;
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: none; color: var(--text);
+      padding: 12px 26px; border-radius: 10px;
+      font-size: .95rem; font-weight: 500;
+      text-decoration: none; border: 1px solid var(--border);
+      cursor: pointer; transition: border-color .2s, color .2s, transform .2s;
     }
-    .btn-secondary:hover { border-color: var(--accent); color: var(--accent-lt); transform: translateY(-2px); }
-    .hero-stats {
-      display: flex; justify-content: center; gap: 3rem;
-      margin-top: 4rem; flex-wrap: wrap;
-    }
-    .stat { text-align: center; }
-    .stat-num {
-      font-size: 2rem; font-weight: 900;
-      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .stat-lbl { font-size: .8rem; color: var(--text-dim); font-weight: 500; }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
 
-    /* ─── PROBLEM ─── */
-    #problem { background: var(--bg-mid); }
-    .before-after {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
-      margin-top: 3rem;
-    }
-    .ba-card {
-      background: var(--bg-card);
+    /* ─── TERMINAL ─── */
+    .terminal-wrap {
+      width: 100%; max-width: 680px;
+      border-radius: 12px; overflow: hidden;
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(99,102,241,0.06);
     }
-    .ba-label {
-      padding: .6rem 1.2rem;
-      font-size: .75rem; font-weight: 700;
-      letter-spacing: .08em; text-transform: uppercase;
+    .term-bar {
+      background: #1a1a24; padding: 10px 14px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .ba-label.before { background: rgba(239,68,68,.1); color: #f87171; border-bottom: 1px solid rgba(239,68,68,.2); }
-    .ba-label.after  { background: rgba(34,197,94,.1); color: #4ade80; border-bottom: 1px solid rgba(34,197,94,.2); }
+    .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-dot.r { background: #ff5f56; }
+    .term-dot.y { background: #ffbd2e; }
+    .term-dot.g { background: #27c93f; }
+    .term-title { flex: 1; text-align: center; font-size: .78rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .term-body {
+      background: var(--bg-code); padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: .82rem;
+      line-height: 1.8; min-height: 220px;
+      overflow: hidden; position: relative;
+    }
+    .term-line {
+      display: block; opacity: 0;
+      transform: translateY(4px);
+      transition: opacity .3s ease, transform .3s ease;
+      white-space: pre;
+    }
+    .term-line.visible { opacity: 1; transform: translateY(0); }
+    .term-line.empty { min-height: 1.4em; }
+    .t-time { color: var(--accent); }
+    .t-bold { color: var(--orange); font-weight: 500; }
+    .t-quote { color: var(--green); }
+    .t-code { color: #7dd3fc; }
+    .t-muted { color: var(--text-muted); }
+    .cursor {
+      display: inline-block; width: 8px; height: 1em;
+      background: var(--accent); vertical-align: text-bottom;
+      animation: blink .9s step-end infinite;
+    }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
-    /* ─── CODE EDITOR ─── */
-    .editor-window {
-      background: var(--bg-code);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      border: 1px solid #30363d;
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card); padding: 1rem 0;
     }
-    .editor-topbar {
-      background: #161b22;
-      padding: .7rem 1rem;
-      display: flex; align-items: center; gap: .75rem;
-      border-bottom: 1px solid #30363d;
-    }
-    .editor-dots { display: flex; gap: 6px; }
-    .dot-red   { width:12px;height:12px;border-radius:50%;background:#ff5f57; }
-    .dot-yel   { width:12px;height:12px;border-radius:50%;background:#febc2e; }
-    .dot-grn   { width:12px;height:12px;border-radius:50%;background:#28c840; }
-    .editor-tabs { display: flex; gap: .5rem; margin-left: .5rem; flex-wrap: wrap; }
-    .editor-tab {
-      background: var(--bg-code); color: var(--text-muted);
-      padding: 4px 14px; border-radius: 6px 6px 0 0;
-      font-size: .75rem; font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      border: 1px solid #30363d; border-bottom: none;
-    }
-    .editor-tab.active { color: var(--text); background: #0d1117; }
-    .editor-copy-btn {
-      margin-left: auto;
-      background: rgba(255,255,255,.05);
-      border: 1px solid #30363d;
-      color: var(--text-muted); padding: 4px 12px;
-      border-radius: 6px; font-size: .75rem; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-weight: 500;
-      transition: all .2s; white-space: nowrap;
-    }
-    .editor-copy-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
-    .editor-copy-btn.copied { color: var(--green); border-color: var(--green); }
-    .code-body {
-      padding: 1.25rem 0;
-      overflow-x: auto;
-    }
-    .code-line {
-      display: flex;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-      font-size: .82rem; line-height: 1.7;
-      padding: 0 1.25rem;
-    }
-    .code-line:hover { background: rgba(255,255,255,.03); }
-    .ln {
-      color: #3d4450; min-width: 2.5rem; text-align: right;
-      margin-right: 1.5rem; user-select: none; flex-shrink: 0;
-    }
-    .code-content { flex: 1; white-space: pre; }
-    /* Syntax colors */
-    .k  { color: #ff7b72; }   /* keyword / heading */
-    .s  { color: #a5d6ff; }   /* string / value */
-    .c  { color: #8b949e; font-style: italic; } /* comment */
-    .f  { color: #d2a8ff; }   /* function/property */
-    .n  { color: #f59e0b; }   /* number / special */
-    .m  { color: #79c0ff; }   /* md heading / key */
-    .g  { color: #56d364; }   /* green / success */
-    .t  { color: var(--text); } /* plain text */
-    .p  { color: #ffa657; }   /* path/filename */
-
-    /* Small inline code editor (before/after) */
-    .ba-code { padding: 1rem; }
-    .ba-code .code-line { padding: 0 .25rem; }
-    .ba-code .ln { min-width: 1.8rem; margin-right: 1rem; }
-
-    /* ─── HOW IT WORKS ─── */
-    #how { background: var(--bg-deep); }
-    .steps {
-      display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem;
-      margin-top: 3rem;
-    }
-    .step-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 2rem 1.75rem;
-      position: relative; text-align: center;
-      transition: border-color .3s, transform .3s;
-    }
-    .step-card:hover { border-color: rgba(217,119,6,.4); transform: translateY(-4px); }
-    .step-num {
-      position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
-      color: #000; width: 28px; height: 28px;
-      border-radius: 50%; font-size: .75rem; font-weight: 800;
+    .stats-inner {
       display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap;
     }
-    .step-icon {
-      font-size: 2.8rem; margin-bottom: 1.2rem;
-      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .stat-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: .5rem 2rem;
+      font-size: .85rem; font-weight: 500; color: var(--text-muted);
+      position: relative;
     }
-    .step-card h3 { font-size: 1.05rem; margin-bottom: .5rem; }
-    .step-card p { font-size: .9rem; }
-    .surprise-box {
-      margin-top: 2.5rem;
-      background: rgba(217,119,6,.08);
-      border: 1.5px solid rgba(217,119,6,.3);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem 2rem;
-      display: flex; align-items: center; gap: 1.25rem;
-      text-align: left;
+    .stat-item + .stat-item::before {
+      content: '';
+      position: absolute; left: 0; top: 15%; bottom: 15%;
+      width: 1px; background: var(--border);
     }
-    .surprise-icon { font-size: 2rem; flex-shrink: 0; color: var(--accent-lt); }
-    .surprise-box strong { color: var(--accent-lt); font-size: 1rem; display: block; margin-bottom: .25rem; }
-    .surprise-box p { font-size: .9rem; margin: 0; }
+    .stat-icon { color: var(--accent); }
+
+    /* ─── SOCIAL PROOF ─── */
+    #social {
+      padding: 4rem 1.5rem;
+      background: var(--bg-card);
+      text-align: center;
+    }
+    .social-badges { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .social-badges img { height: 22px; }
+    .social-quote { color: var(--text-muted); font-size: .9rem; font-style: italic; margin-bottom: 1.25rem; }
+    .avatars { display: flex; align-items: center; justify-content: center; gap: -8px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid var(--bg-card);
+      margin-left: -8px; overflow: hidden; flex-shrink: 0;
+    }
+    .avatar:first-child { margin-left: 0; }
+
+    /* ─── SECTION BASE ─── */
+    section { padding: 6rem 1.5rem; }
+    .section-title {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 600; letter-spacing: -0.03em;
+      margin-bottom: 3rem; text-align: center;
+    }
+
+    /* ─── FADE IN ─── */
+    .fade-in {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── PROBLEMA ─── */
+    #problem { background: var(--bg); }
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .editor-win { border-radius: 10px; overflow: hidden; border: 1px solid; }
+    .editor-win.bad { border-color: rgba(239,68,68,0.35); }
+    .editor-win.good { border-color: rgba(16,185,129,0.35); }
+    .editor-bar {
+      background: #1a1a24; padding: 8px 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .editor-label {
+      flex: 1; text-align: center; font-size: .75rem;
+      font-weight: 600; letter-spacing: .06em;
+    }
+    .editor-win.bad .editor-label { color: var(--red); }
+    .editor-win.good .editor-label { color: var(--green); }
+    .editor-body {
+      background: var(--bg-code); padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: .78rem;
+      line-height: 1.85; color: var(--text-muted);
+    }
+    .ed-comment { color: #4a5568; }
+    .ed-bad { color: var(--red); }
+    .ed-good-time { color: var(--accent); }
+    .ed-good-bold { color: var(--orange); font-weight: 500; }
+    .ed-good-quote { color: var(--green); }
+    .ed-good-code { color: #7dd3fc; }
+
+    /* ─── CÓMO FUNCIONA ─── */
+    #how { background: var(--bg-card); }
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap; margin-bottom: 2.5rem;
+    }
+    .flow-node {
+      display: flex; flex-direction: column; align-items: center; gap: .5rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem; min-width: 130px;
+      transition: border-color .2s, transform .2s;
+    }
+    .flow-node:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .flow-node svg { color: var(--accent); }
+    .flow-node-label { font-size: .8rem; font-weight: 500; color: var(--text-muted); text-align: center; }
+    .flow-node-name { font-size: .9rem; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; text-align: center; }
+    .flow-arrow {
+      display: flex; align-items: center; padding: 0 .25rem;
+    }
+    .flow-arrow svg { overflow: visible; }
+    .flow-arrow-path {
+      stroke: var(--accent); stroke-width: 2;
+      fill: none; stroke-dasharray: 60;
+      stroke-dashoffset: 60;
+      transition: stroke-dashoffset 1s ease;
+    }
+    .flow-arrow-path.animated { stroke-dashoffset: 0; }
+    .flow-caption { text-align: center; color: var(--text-muted); font-size: .95rem; margin-top: 1rem; }
+    .flow-caption strong { color: var(--text); }
 
     /* ─── DEMO ─── */
-    #demo { background: var(--bg-mid); }
-    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 3rem; }
+    #demo { background: var(--bg); }
+    .demo-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap; }
+    .demo-tab {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); padding: 8px 18px;
+      border-radius: 8px; cursor: pointer;
+      font-size: .85rem; font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      transition: all .2s;
+    }
+    .demo-tab.active { background: var(--accent-glow); border-color: var(--accent); color: var(--text); }
+    .demo-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+    .demo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem; }
+    .btn-sim {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-glow); border: 1px solid rgba(99,102,241,0.3);
+      color: var(--accent); padding: 8px 16px;
+      border-radius: 8px; cursor: pointer; font-size: .85rem;
+      font-weight: 600; font-family: 'Inter', sans-serif;
+      transition: all .2s;
+    }
+    .btn-sim:hover { background: rgba(99,102,241,0.25); }
+    .demo-editor {
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    }
+    .demo-editor-bar {
+      background: #1a1a24; padding: 9px 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .demo-editor-tab {
+      background: var(--bg-code); padding: 4px 14px;
+      border-radius: 6px 6px 0 0; font-size: .75rem;
+      color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+    }
+    .demo-editor-body {
+      background: var(--bg-code); display: flex;
+      font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+      line-height: 1.85; min-height: 280px;
+    }
+    .line-numbers {
+      padding: 1.25rem .75rem; color: #3a3a55;
+      text-align: right; user-select: none;
+      border-right: 1px solid var(--border); min-width: 42px;
+    }
+    .line-numbers span { display: block; }
+    .demo-code { padding: 1.25rem 1.5rem; flex: 1; overflow-x: auto; }
+    .demo-code-line { display: block; white-space: pre; }
+    .dc-time { color: var(--accent); }
+    .dc-bold { color: var(--orange); font-weight: 500; }
+    .dc-quote { color: var(--green); }
+    .dc-code { color: #7dd3fc; }
+    .dc-muted { color: var(--text-muted); }
+    .dc-dim { color: #3a3a55; }
 
-    /* ─── CONFIG ─── */
-    #config { background: var(--bg-deep); }
-    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 3rem; }
-    .config-annotations { display: flex; flex-direction: column; gap: 1rem; }
+    /* ─── PARA QUIÉN ─── */
+    #audience { background: var(--bg-card); }
+    .audience-list { display: flex; flex-direction: column; gap: .75rem; max-width: 720px; margin: 0 auto; }
+    .audience-item {
+      display: flex; align-items: flex-start; gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--bg); border-left: 3px solid transparent;
+      border-radius: 0 10px 10px 0;
+      transition: border-color .2s, background .2s, transform .2s;
+      border: 1px solid var(--border); border-left: 3px solid transparent;
+    }
+    .audience-item:hover { border-left-color: var(--accent); background: var(--bg-card); transform: translateX(3px); }
+    .audience-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: .1rem; }
+    .audience-text strong { color: var(--text); font-weight: 600; }
+    .audience-text { color: var(--text-muted); font-size: .9rem; }
+    .audience-text strong { display: block; margin-bottom: .2rem; font-size: .95rem; color: var(--text); }
+
+    /* ─── CONFIGURACIÓN ─── */
+    #config { background: var(--bg); }
+    .config-wrap { position: relative; max-width: 700px; margin: 0 auto; }
+    .config-editor { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .config-bar {
+      background: #1a1a24; padding: 9px 14px;
+      display: flex; align-items: center; gap: 8px; justify-content: space-between;
+    }
+    .config-title { font-size: .8rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .btn-copy-config {
+      background: var(--accent-glow); border: 1px solid rgba(99,102,241,0.25);
+      color: var(--accent); padding: 5px 12px; border-radius: 6px;
+      font-size: .78rem; font-weight: 600; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: all .2s;
+    }
+    .btn-copy-config:hover { background: rgba(99,102,241,0.25); }
+    .config-body {
+      background: var(--bg-code); padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: .82rem;
+      line-height: 1.9; position: relative;
+    }
+    .cfg-key { color: #7dd3fc; }
+    .cfg-val { color: var(--green); }
+    .cfg-num { color: var(--orange); }
+    .cfg-comment { color: #3d4a5c; }
+    .cfg-punct { color: var(--text-muted); }
     .annotation {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 0 var(--radius) var(--radius) 0;
-      padding: .75rem 1rem;
+      position: absolute; right: -220px; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .5rem .75rem; font-size: .75rem; color: var(--text-muted);
+      font-family: 'Inter', sans-serif; max-width: 180px; line-height: 1.4;
     }
-    .annotation code {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--accent-lt); font-size: .8rem;
-      background: rgba(217,119,6,.1);
-      padding: 1px 6px; border-radius: 4px;
+    .annotation::before {
+      content: '';
+      position: absolute; left: -8px; top: 50%;
+      transform: translateY(-50%);
+      border: 4px solid transparent;
+      border-right-color: var(--border);
     }
-    .annotation p { font-size: .85rem; margin-top: .25rem; color: var(--text-muted); }
 
-    /* ─── FOR WHOM ─── */
-    #for-whom { background: var(--bg-mid); }
-    .cards-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; margin-top: 3rem; }
-    .whom-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 2rem 1.5rem;
-      transition: border-color .3s, transform .3s;
+    /* ─── INSTALACIÓN ─── */
+    #install { background: var(--bg-card); }
+    .install-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; justify-content: center; }
+    .install-tab {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); padding: 7px 18px;
+      border-radius: 8px; cursor: pointer; font-size: .85rem;
+      font-weight: 500; font-family: 'Inter', sans-serif;
+      transition: all .2s;
     }
-    .whom-card:hover { border-color: rgba(217,119,6,.4); transform: translateY(-4px); }
-    .whom-icon {
-      width: 52px; height: 52px;
-      background: rgba(217,119,6,.1);
-      border: 1px solid rgba(217,119,6,.2);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; color: var(--accent-lt);
-      margin-bottom: 1.2rem;
+    .install-tab.active { background: var(--accent-glow); border-color: var(--accent); color: var(--text); }
+    .install-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+    .code-block {
+      background: var(--bg-code); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; margin-bottom: 1rem;
     }
-    .whom-card h3 { margin-bottom: .5rem; }
-    .whom-card ul { list-style: none; margin-top: .75rem; }
-    .whom-card ul li {
-      font-size: .88rem; color: var(--text-muted);
-      padding: .3rem 0;
-      border-bottom: 1px solid rgba(255,255,255,.04);
-      display: flex; align-items: flex-start; gap: .5rem;
+    .code-block-bar {
+      background: #1a1a24; padding: 8px 14px;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .whom-card ul li::before { content: "→"; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
-
-    /* ─── INSTALL ─── */
-    #install { background: var(--bg-deep); }
-    .install-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .tab-btn {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-muted); padding: 8px 20px;
-      border-radius: 8px; cursor: pointer; font-size: .88rem;
+    .code-block-label { font-size: .75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .btn-copy {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); padding: 4px 10px;
+      border-radius: 5px; font-size: .72rem; cursor: pointer;
       font-family: 'Inter', sans-serif; font-weight: 500;
       transition: all .2s;
     }
-    .tab-btn.active { background: rgba(217,119,6,.15); border-color: var(--accent); color: var(--accent-lt); }
-    .tab-btn:hover:not(.active) { border-color: var(--text-dim); color: var(--text); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* Accordion */
-    .accordion {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      margin-top: 1.5rem; overflow: hidden;
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-copy.copied { border-color: var(--green); color: var(--green); }
+    .code-block-body {
+      padding: 1.1rem 1.4rem;
+      font-family: 'JetBrains Mono', monospace; font-size: .82rem;
+      line-height: 1.75; color: var(--text);
     }
+    .code-block-body .cmd-comment { color: var(--text-muted); }
+    .code-block-body .cmd-dollar { color: var(--accent); }
+    .accordion { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
     .accordion-header {
-      padding: 1.1rem 1.5rem;
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none;
+      background: var(--bg); padding: 1rem 1.4rem;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; font-size: .9rem; font-weight: 500;
       transition: background .2s;
     }
-    .accordion-header:hover { background: rgba(255,255,255,.03); }
-    .accordion-header h3 { font-size: .95rem; margin: 0; }
-    .accordion-arrow { color: var(--text-muted); transition: transform .3s; font-size: .85rem; }
-    .accordion.open .accordion-arrow { transform: rotate(180deg); }
-    .accordion-body { display: none; padding: 0 1.5rem 1.5rem; }
-    .accordion.open .accordion-body { display: block; }
-    .accordion-body ol { padding-left: 1.5rem; }
-    .accordion-body ol li { font-size: .9rem; color: var(--text-muted); margin-bottom: .5rem; }
+    .accordion-header:hover { background: var(--bg-card); }
+    .accordion-arrow { transition: transform .3s; color: var(--text-muted); }
+    .accordion-arrow.open { transform: rotate(180deg); }
+    .accordion-body { display: none; background: var(--bg-code); }
+    .accordion-body.open { display: block; }
+    .install-note { font-size: .82rem; color: var(--text-muted); text-align: center; margin-top: 1rem; }
+    .install-note strong { color: var(--text); }
+    .install-panel { display: none; }
+    .install-panel.active { display: block; }
 
     /* ─── FOOTER ─── */
     footer {
-      background: var(--bg-card);
-      border-top: 1px solid var(--border);
-      padding: 3rem 1.5rem;
-      text-align: center;
+      background: var(--bg-card); border-top: 1px solid var(--border);
+      padding: 3rem 1.5rem; text-align: center;
     }
-    .footer-tagline {
-      font-size: clamp(1rem, 2.5vw, 1.4rem);
-      font-weight: 700; margin-bottom: .5rem;
+    .footer-logo {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: .95rem; font-weight: 600; color: var(--text);
+      text-decoration: none; margin-bottom: 1.5rem;
     }
-    .footer-tagline .accent { color: var(--accent-lt); }
-    .footer-sub { font-size: .9rem; color: var(--text-muted); margin-bottom: 2rem; }
-    .footer-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-    .footer-links a {
-      color: var(--text-muted); text-decoration: none;
-      font-size: .85rem; font-weight: 500;
-      display: flex; align-items: center; gap: 6px;
-      transition: color .2s;
+    .footer-logo .logo-bracket { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+    .footer-links {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; list-style: none;
     }
-    .footer-links a:hover { color: var(--accent-lt); }
-    .footer-meta { font-size: .78rem; color: var(--text-dim); }
+    .footer-links a { color: var(--text-muted); text-decoration: none; font-size: .85rem; transition: color .2s; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-by { font-size: .82rem; color: var(--text-muted); margin-bottom: .75rem; }
+    .footer-by a { color: var(--accent); text-decoration: none; }
+    .footer-by a:hover { text-decoration: underline; }
+    .footer-meta { font-size: .78rem; color: #3d4a5c; margin-bottom: 1.25rem; }
+    .footer-final {
+      font-size: .875rem; color: var(--text-muted);
+      max-width: 480px; margin: 0 auto; font-style: italic;
+      padding: 1rem 1.5rem; border: 1px solid var(--border);
+      border-radius: 10px; background: var(--bg);
+    }
+
+    /* ─── STICKY CTA ─── */
+    .sticky-cta {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 150;
+      display: none; align-items: center; gap: 7px;
+      background: var(--accent-grad); color: #fff;
+      padding: 12px 22px; border-radius: 30px; font-size: .9rem;
+      font-weight: 600; text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+      transition: filter .2s, transform .2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .sticky-cta.visible { display: flex; }
+    .sticky-cta:hover { filter: brightness(1.1); transform: translateY(-2px); }
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
-      nav { padding: 0 1rem; }
-      .nav-links { display: none; }
-      .nav-links.open {
-        display: flex; flex-direction: column;
-        position: fixed; top: 64px; left: 0; right: 0;
-        background: rgba(26,26,46,.97);
-        backdrop-filter: blur(16px);
-        padding: 1.5rem; gap: 1rem;
-        border-bottom: 1px solid var(--border);
-      }
+      nav { padding: 0 1.25rem; }
+      .nav-links, .nav-github { display: none; }
       .hamburger { display: block; }
-      .before-after { grid-template-columns: 1fr; }
-      .steps { grid-template-columns: 1fr; }
-      .demo-grid { grid-template-columns: 1fr; }
-      .config-grid { grid-template-columns: 1fr; }
-      .cards-grid { grid-template-columns: 1fr; }
-      .surprise-box { flex-direction: column; text-align: center; }
-      .hero-stats { gap: 2rem; }
-      section { padding: 4rem 1rem; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .flow-diagram { flex-direction: column; gap: .5rem; }
+      .flow-arrow { transform: rotate(90deg); }
+      .annotation { display: none; }
+      .stat-item { padding: .5rem 1rem; }
+      section { padding: 4rem 1.25rem; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+    }
+    @media (max-width: 480px) {
+      .stats-inner { flex-direction: column; align-items: flex-start; padding: 0 1.5rem; }
+      .stat-item + .stat-item::before { display: none; }
     }
   </style>
 </head>
 <body>
 
-<!-- ─── NAVBAR ─── -->
+<!-- ─── NAV ─── -->
 <nav id="navbar">
   <a href="#hero" class="nav-logo">
-    <i class="fa-solid fa-book-open-reader"></i>
-    Auto<span>Doc</span>
+    <span class="logo-bracket">&lt;/&gt;</span>
+    AutoDoc
   </a>
   <ul class="nav-links" id="nav-links">
-    <li><a href="#problem"  data-i18n="nav_problem">El problema</a></li>
-    <li><a href="#how"      data-i18n="nav_how">Cómo funciona</a></li>
-    <li><a href="#demo"     data-i18n="nav_demo">Demo</a></li>
-    <li><a href="#install"  data-i18n="nav_install">Instalar</a></li>
+    <li><a href="#how" data-i18n="nav_how">Cómo funciona</a></li>
+    <li><a href="#demo" data-i18n="nav_demo">Demo</a></li>
+    <li><a href="#install" data-i18n="nav_install_link">Instalación</a></li>
   </ul>
   <div class="nav-right">
-    <button class="lang-btn" id="lang-toggle" aria-label="Cambiar idioma">
-      <span class="lang-opt" id="lang-es">ES</span>
-      <span style="opacity:.3">|</span>
-      <span class="lang-opt" id="lang-en">EN</span>
-    </button>
-    <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener" class="nav-github">
-      <i class="fa-brands fa-github"></i>
-      GitHub
+    <a href="#install" class="nav-install-btn" id="nav-install-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3l3.293 3.293-7 7 1.414 1.414 7-7L21 11V3z"/><path d="M19 19H5V5h7l-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7l-2-2v9z"/></svg>
+      <span data-i18n="nav_cta">Instalar</span>
     </a>
-    <button class="hamburger" id="hamburger" aria-label="Menú">
-      <i class="fa-solid fa-bars"></i>
+    <button class="lang-btn" id="lang-btn" aria-label="Toggle language">
+      <span class="lo" id="lo-es">ES</span>
+      <span style="opacity:.3">|</span>
+      <span class="lo" id="lo-en">EN</span>
+    </button>
+    <a href="https://github.com/David01mc/autodoc" class="nav-github" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      <span data-i18n="nav_github">Star on GitHub</span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </div>
 </nav>
 
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#how" data-i18n="nav_how">Cómo funciona</a>
+  <a href="#demo" data-i18n="nav_demo">Demo</a>
+  <a href="#install" data-i18n="nav_install_link">Instalación</a>
+  <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener" data-i18n="nav_github">Star on GitHub</a>
+</div>
+
 <!-- ─── HERO ─── -->
 <section id="hero">
-  <div class="container hero-inner fade-in">
-    <div class="hero-badge">
-      <span class="dot"></span>
-      <span data-i18n="badge_tokens">0 tokens extra</span>
-      <span class="sep">·</span>
-      <span>Python 3.8+</span>
-      <span class="sep">·</span>
-      <span>Claude Code</span>
-      <span class="sep">·</span>
-      <span>MIT</span>
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    <span data-i18n="hero_badge">OPEN SOURCE · MIT · v1.0</span>
+  </div>
+  <h1 class="hero-h1" data-i18n="hero_h1">Tu código ya está documentado.</h1>
+  <span class="hero-h1-line2" data-i18n="hero_h1_line2">Solo que aún no lo sabías.</span>
+  <p class="hero-sub" data-i18n="hero_sub">Hook de Claude Code. Documenta cada sesión. 0 tokens extra.</p>
+  <div class="hero-ctas">
+    <a href="#install" class="btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3l3.293 3.293-7 7 1.414 1.414 7-7L21 11V3z"/><path d="M19 19H5V5h7l-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7l-2-2v9z"/></svg>
+      <span data-i18n="cta_install">Instalar en 60s</span>
+    </a>
+    <a href="https://github.com/David01mc/autodoc" class="btn-ghost" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      <span data-i18n="cta_github">Ver en GitHub →</span>
+    </a>
+  </div>
+
+  <!-- Terminal -->
+  <div class="terminal-wrap fade-in">
+    <div class="term-bar">
+      <span class="term-dot r"></span>
+      <span class="term-dot y"></span>
+      <span class="term-dot g"></span>
+      <span class="term-title mono">docs/2026-03-28.md</span>
     </div>
-    <h1 class="hero-h1">
-      <span data-i18n="hero_h1_1">Tu código ya está</span><br/>
-      <span class="accent" data-i18n="hero_h1_accent">documentado.</span><br/>
-      <span data-i18n="hero_h1_2">Solo que aún no lo sabías.</span>
-    </h1>
-    <p class="hero-sub" data-i18n="hero_sub">
-      AutoDoc se engancha al evento <strong>Stop</strong> de Claude Code y escribe el diario de tu sesión automáticamente. Sin tokens extra. Sin esfuerzo manual. Listo para el próximo desarrollador.
-    </p>
-    <div class="hero-ctas">
-      <a href="#install" class="btn-primary">
-        <i class="fa-solid fa-bolt"></i>
-        <span data-i18n="cta_install">Instalar en 60 segundos</span>
-      </a>
-      <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener" class="btn-secondary">
-        <i class="fa-brands fa-github"></i>
-        <span data-i18n="cta_github">Ver en GitHub</span>
-      </a>
+    <div class="term-body" id="term-body">
+      <span class="term-line" id="tl0"><span class="t-time">### 14:32:10</span></span>
+      <span class="term-line empty" id="tl1"></span>
+      <span class="term-line" id="tl2"><span class="t-bold">**Objetivo:**</span><span class="t-muted"> Implementar: añadir autenticación JWT</span></span>
+      <span class="term-line empty" id="tl3"></span>
+      <span class="term-line" id="tl4"><span class="t-quote">&gt; **Usuario:** Añade JWT auth a la API Express</span></span>
+      <span class="term-line empty" id="tl5"></span>
+      <span class="term-line" id="tl6"><span class="t-bold">**Resultado:**</span></span>
+      <span class="term-line" id="tl7"><span class="t-muted">  - Middleware valida Bearer token en cada petición</span></span>
+      <span class="term-line" id="tl8"><span class="t-muted">  - Devuelve 401 si el token es inválido</span></span>
+      <span class="term-line empty" id="tl9"></span>
+      <span class="term-line" id="tl10"><span class="t-bold">**Archivos:**</span></span>
+      <span class="term-line" id="tl11"><span class="t-muted">  - Creados: </span><span class="t-code">`auth.middleware.ts`</span></span>
+      <span class="term-line" id="tl12"><span class="t-muted">  - Modificados: </span><span class="t-code">`app.ts`</span><span class="t-muted">, </span><span class="t-code">`routes/api.ts`</span></span>
+      <span class="cursor" id="term-cursor"></span>
     </div>
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num">0</div>
-        <div class="stat-lbl" data-i18n="stat_tokens">tokens extra</div>
+  </div>
+</section>
+
+<!-- ─── STATS BAR ─── -->
+<div class="stats-bar">
+  <div class="stats-inner container">
+    <div class="stat-item">
+      <svg class="stat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+      <span data-i18n="stat_0">0 tokens extra</span>
+    </div>
+    <div class="stat-item">
+      <svg class="stat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span data-i18n="stat_1">Instala en 60s</span>
+    </div>
+    <div class="stat-item">
+      <svg class="stat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/></svg>
+      <span data-i18n="stat_2">ES / EN</span>
+    </div>
+    <div class="stat-item">
+      <svg class="stat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span data-i18n="stat_3">100% gratis</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SOCIAL PROOF ─── -->
+<section id="social">
+  <div class="container">
+    <div class="social-badges">
+      <img src="https://img.shields.io/github/stars/David01mc/autodoc?style=social" alt="GitHub stars" loading="lazy" />
+      <img src="https://img.shields.io/github/forks/David01mc/autodoc?style=social" alt="GitHub forks" loading="lazy" />
+    </div>
+    <p class="social-quote" data-i18n="social_quote">"Usado por desarrolladores que trabajan con Claude Code a diario"</p>
+    <div class="avatars">
+      <!-- Generic SVG avatars with accent colors -->
+      <div class="avatar">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" fill="#6366f1"/>
+          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
+          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
       </div>
-      <div class="stat">
-        <div class="stat-num">60s</div>
-        <div class="stat-lbl" data-i18n="stat_install">instalación</div>
+      <div class="avatar">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" fill="#8b5cf6"/>
+          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
+          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
       </div>
-      <div class="stat">
-        <div class="stat-num">2</div>
-        <div class="stat-lbl" data-i18n="stat_langs">idiomas</div>
+      <div class="avatar">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" fill="#10b981"/>
+          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
+          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
       </div>
-      <div class="stat">
-        <div class="stat-num">100%</div>
-        <div class="stat-lbl" data-i18n="stat_free">gratis &amp; open source</div>
+      <div class="avatar">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" fill="#f59e0b"/>
+          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
+          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
+      </div>
+      <div class="avatar">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" fill="#3b82f6"/>
+          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
+          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── PROBLEM ─── -->
+<!-- ─── PROBLEMA ─── -->
 <section id="problem">
   <div class="container">
-    <div class="fade-in">
-      <span class="section-label" data-i18n="section_problem_label">El problema</span>
-      <h2 data-i18n="section_problem_h2">¿Cuántas veces empezaste el día<br/>sin saber dónde lo dejaste?</h2>
-      <p data-i18n="section_problem_p">Sin AutoDoc, reconstruir el contexto de ayer te cuesta tiempo, tokens y frustración. Con AutoDoc, el diario ya está escrito.</p>
-    </div>
-    <div class="before-after fade-in">
-      <!-- BEFORE -->
-      <div class="ba-card">
-        <div class="ba-label before"><i class="fa-solid fa-circle-xmark"></i>&nbsp; <span data-i18n="before_label">Sin AutoDoc</span></div>
-        <div class="editor-window ba-code">
-          <div class="code-body">
-            <div class="code-line"><span class="ln">1</span><span class="code-content c"># notas.txt — día anterior</span></div>
-            <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">3</span><span class="code-content t">arreglé algo en auth</span></div>
-            <div class="code-line"><span class="ln">4</span><span class="code-content t">creo que fue en app.ts?</span></div>
-            <div class="code-line"><span class="ln">5</span><span class="code-content c"># TODO: revisar tokens JWT</span></div>
-            <div class="code-line"><span class="ln">6</span><span class="code-content t">el CORS seguía fallando al final</span></div>
-            <div class="code-line"><span class="ln">7</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">8</span><span class="code-content k">??? ← siguiente paso desconocido</span></div>
-          </div>
+    <h2 class="section-title fade-in" data-i18n="problem_title">¿Cuántas veces empezaste el día sin saber dónde lo dejaste?</h2>
+    <div class="problem-grid fade-in">
+      <!-- SIN AutoDoc -->
+      <div class="editor-win bad">
+        <div class="editor-bar">
+          <span class="term-dot r"></span>
+          <span class="term-dot y"></span>
+          <span class="term-dot g"></span>
+          <span class="editor-label" data-i18n="problem_without">SIN AutoDoc</span>
+        </div>
+        <div class="editor-body">
+          <span class="ed-comment">// TODO: terminar esto mañana</span><br>
+          <span class="ed-comment">// creo que algo estaba roto aquí</span><br>
+          <span class="ed-bad">// WTF does this do??</span><br>
+          <br>
+          <span class="ed-comment">// notas de ayer:</span><br>
+          <span class="ed-comment">// - arreglar bug del auth?</span><br>
+          <span class="ed-comment">// - revisar el middleware</span><br>
+          <span class="ed-comment">// - preguntar a... no sé quién</span><br>
+          <br>
+          <span class="ed-bad">// ¿por qué pusé esto así?</span><br>
+          <span class="ed-comment">// var old = ...</span><br>
+          <span class="ed-comment">// v2 = ...</span><br>
+          <span class="ed-comment">// v3 final = ...</span>
         </div>
       </div>
-      <!-- AFTER -->
-      <div class="ba-card">
-        <div class="ba-label after"><i class="fa-solid fa-circle-check"></i>&nbsp; <span data-i18n="after_label">Con AutoDoc</span></div>
-        <div class="editor-window ba-code">
-          <div class="code-body">
-            <div class="code-line"><span class="ln">1</span><span class="code-content m">### 17:48:22</span></div>
-            <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Objetivo:**</span> <span class="t">Auth JWT → middleware Express</span></span></div>
-            <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="k">**Resultado:**</span> <span class="g">✓ token validado en cada ruta</span></span></div>
-            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">**Archivos:**</span> <span class="p">auth.middleware.ts, app.ts</span></span></div>
-            <div class="code-line"><span class="ln">6</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">7</span><span class="code-content n">`3xEdit, 1xWrite | 2.1k tokens`</span></div>
-            <div class="code-line"><span class="ln">8</span><span class="code-content g"># ← continuar desde aquí</span></div>
-          </div>
+      <!-- CON AutoDoc -->
+      <div class="editor-win good">
+        <div class="editor-bar">
+          <span class="term-dot r"></span>
+          <span class="term-dot y"></span>
+          <span class="term-dot g"></span>
+          <span class="editor-label" data-i18n="problem_with">CON AutoDoc</span>
+        </div>
+        <div class="editor-body">
+          <span class="ed-good-time">### 14:32:10</span><br>
+          <br>
+          <span class="ed-good-bold">**Objetivo:**</span><span style="color:var(--text-muted)"> JWT auth en API Express</span><br>
+          <br>
+          <span class="ed-good-quote">&gt; **Usuario:** Añade JWT auth</span><br>
+          <br>
+          <span class="ed-good-bold">**Resultado:**</span><br>
+          <span style="color:var(--text-muted)">  - Middleware valida Bearer token</span><br>
+          <span style="color:var(--text-muted)">  - 401 si token inválido</span><br>
+          <br>
+          <span class="ed-good-bold">**Archivos:**</span><br>
+          <span style="color:var(--text-muted)">  - Creados: </span><span class="ed-good-code">`auth.middleware.ts`</span><br>
+          <span style="color:var(--text-muted)">  - Modificados: </span><span class="ed-good-code">`app.ts`</span>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── HOW IT WORKS ─── -->
+<!-- ─── CÓMO FUNCIONA ─── -->
 <section id="how">
   <div class="container">
-    <div class="fade-in">
-      <span class="section-label" data-i18n="section_how_label">Cómo funciona</span>
-      <h2 data-i18n="section_how_h2">Tres pasos. Cero interrupciones.</h2>
-      <p data-i18n="section_how_p">AutoDoc se instala una vez y trabaja en silencio. Tú trabajas con Claude Code exactamente igual que siempre.</p>
+    <h2 class="section-title fade-in" data-i18n="how_title">Cero configuración. Cero fricción.</h2>
+    <div class="flow-diagram fade-in" id="flow-diagram">
+      <!-- Node 1 -->
+      <div class="flow-node">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--accent)">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9l3 3-3 3M13 15h3"/>
+        </svg>
+        <span class="flow-node-name">Claude Code</span>
+        <span class="flow-node-label" data-i18n="flow_1">Tu flujo normal</span>
+      </div>
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <path class="flow-arrow-path" d="M0 10 Q20 10 35 10" stroke-linecap="round"/>
+          <polyline points="30,6 38,10 30,14" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- Node 2 -->
+      <div class="flow-node">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--accent)">
+          <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+        </svg>
+        <span class="flow-node-name">Hook Stop</span>
+        <span class="flow-node-label" data-i18n="flow_2">Evento automático</span>
+      </div>
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <path class="flow-arrow-path" d="M0 10 Q20 10 35 10" stroke-linecap="round"/>
+          <polyline points="30,6 38,10 30,14" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- Node 3 -->
+      <div class="flow-node">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--accent)">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="flow-node-name mono" style="font-size:.78rem">log_activity.py</span>
+        <span class="flow-node-label" data-i18n="flow_3">Lee transcripción</span>
+      </div>
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <path class="flow-arrow-path" d="M0 10 Q20 10 35 10" stroke-linecap="round"/>
+          <polyline points="30,6 38,10 30,14" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- Node 4 -->
+      <div class="flow-node">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--accent)">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span class="flow-node-name mono" style="font-size:.78rem">docs/YYYY-MM-DD.md</span>
+        <span class="flow-node-label" data-i18n="flow_4">Diario generado</span>
+      </div>
     </div>
-    <div class="steps fade-in">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <div class="step-icon"><i class="fa-solid fa-download"></i></div>
-        <h3 data-i18n="step1_h">Instalas AutoDoc</h3>
-        <p data-i18n="step1_p">Ejecuta <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">install.sh</code> o <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">install.bat</code> apuntando a tu proyecto. En 60 segundos está listo.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <div class="step-icon"><i class="fa-solid fa-comments"></i></div>
-        <h3 data-i18n="step2_h">Trabajas como siempre</h3>
-        <p data-i18n="step2_p">Abre Claude Code y trabaja exactamente igual. AutoDoc opera en el fondo, invisible. No cambia nada de tu flujo.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <div class="step-icon"><i class="fa-solid fa-file-lines"></i></div>
-        <h3 data-i18n="step3_h">El diario se escribe solo</h3>
-        <p data-i18n="step3_p">Tras cada respuesta de Claude, una entrada estructurada se añade a <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">docs/YYYY-MM-DD.md</code>. Automáticamente.</p>
-      </div>
-    </div>
-    <div class="surprise-box fade-in">
-      <div class="surprise-icon"><i class="fa-solid fa-circle-bolt fa-bounce"></i></div>
-      <div>
-        <strong data-i18n="surprise_strong">Sin llamadas a la API. Sin tokens. Completamente gratis.</strong>
-        <p data-i18n="surprise_p">AutoDoc lee la transcripción local del hook <code style="color:var(--accent-lt);font-family:monospace">Stop</code> de Claude Code. No hace ninguna petición a Anthropic. Cada entrada del diario cuesta exactamente 0 tokens adicionales.</p>
-      </div>
-    </div>
+    <p class="flow-caption fade-in" data-i18n="how_caption"><strong>Sin llamadas a la API. Sin tokens. Completamente gratis.</strong></p>
   </div>
 </section>
 
 <!-- ─── DEMO ─── -->
 <section id="demo">
   <div class="container">
-    <div class="fade-in">
-      <span class="section-label" data-i18n="section_demo_label">Demo en vivo</span>
-      <h2 data-i18n="section_demo_h2">Así se ve el diario generado</h2>
-      <p data-i18n="section_demo_p">Una entrada real después de una sesión de trabajo. Y el resumen del día con <code style="color:var(--accent-lt);font-family:monospace">/summary</code>.</p>
+    <h2 class="section-title fade-in" data-i18n="demo_title">Mira lo que genera AutoDoc</h2>
+    <div class="demo-header fade-in">
+      <div class="demo-tabs">
+        <button class="demo-tab active" id="tab-single" data-i18n="demo_tab1">Entrada individual</button>
+        <button class="demo-tab" id="tab-summary" data-i18n="demo_tab2">Resumen del día</button>
+      </div>
+      <button class="btn-sim" id="btn-sim">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span data-i18n="demo_sim">Simular sesión</span>
+      </button>
     </div>
-    <div class="demo-grid fade-in">
-      <!-- Diary entry -->
-      <div class="editor-window">
-        <div class="editor-topbar">
-          <div class="editor-dots">
-            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-          </div>
-          <div class="editor-tabs">
-            <div class="editor-tab active">docs/2026-03-28.md</div>
-          </div>
-          <button class="editor-copy-btn" data-copy="diary" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+    <!-- Panel: entrada individual -->
+    <div class="demo-editor fade-in" id="panel-single">
+      <div class="demo-editor-bar">
+        <span class="term-dot r"></span>
+        <span class="term-dot y"></span>
+        <span class="term-dot g"></span>
+        <span class="demo-editor-tab">docs/2026-03-28.md</span>
+      </div>
+      <div class="demo-editor-body">
+        <div class="line-numbers" id="line-nums">
+          <span>1</span><span>2</span><span>3</span><span>4</span>
+          <span>5</span><span>6</span><span>7</span><span>8</span>
+          <span>9</span><span>10</span><span>11</span><span>12</span>
+          <span>13</span><span>14</span><span>15</span><span>16</span>
         </div>
-        <div class="code-body" id="diary-code">
-          <div class="code-line"><span class="ln">1</span><span class="code-content m">### 14:32:10</span></div>
-          <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Objetivo:**</span> <span class="t">Implementar: middleware auth JWT</span></span></div>
-          <div class="code-line"><span class="ln">4</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="f">&gt; </span><span class="k">**Usuario:**</span> <span class="t">Añade auth JWT a la API,</span></span></div>
-          <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">verifica el token en cada ruta protegida</span></span></div>
-          <div class="code-line"><span class="ln">7</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">8</span><span class="code-content"><span class="k">**Resultado:**</span></span></div>
-          <div class="code-line"><span class="ln">9</span><span class="code-content"><span class="t">  - Middleware valida Bearer token</span></span></div>
-          <div class="code-line"><span class="ln">10</span><span class="code-content"><span class="t">  - Devuelve 401 si token inválido</span></span></div>
-          <div class="code-line"><span class="ln">11</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">12</span><span class="code-content"><span class="k">**Archivos:**</span></span></div>
-          <div class="code-line"><span class="ln">13</span><span class="code-content"><span class="t">  - Creados: </span><span class="p">`auth.middleware.ts`</span></span></div>
-          <div class="code-line"><span class="ln">14</span><span class="code-content"><span class="t">  - Modificados: </span><span class="p">`app.ts`, `routes/api.ts`</span></span></div>
-          <div class="code-line"><span class="ln">15</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">16</span><span class="code-content"><span class="k">**Cambios en código:**</span></span></div>
-          <div class="code-line"><span class="ln">17</span><span class="code-content"><span class="t">  - </span><span class="p">`auth.middleware.ts`</span><span class="t"> creado</span></span></div>
-          <div class="code-line"><span class="ln">18</span><span class="code-content"><span class="t">    (45 líneas): </span><span class="f">verifyToken</span><span class="t">, </span><span class="f">authMiddleware</span></span></div>
-          <div class="code-line"><span class="ln">19</span><span class="code-content"><span class="t">  - </span><span class="p">`app.ts`</span><span class="t">: añadido </span><span class="f">applyMiddleware</span></span></div>
-          <div class="code-line"><span class="ln">20</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">21</span><span class="code-content"><span class="n">`3xEdit, 1xWrite, 1xRead`</span></span></div>
-          <div class="code-line"><span class="ln">22</span><span class="code-content"><span class="n">`Tokens: 2.1k (in:1.4k, out:0.7k)`</span></span></div>
-          <div class="code-line"><span class="ln">23</span><span class="code-content"><span class="n">`Sesión total: 18.3k`</span></span></div>
+        <div class="demo-code">
+          <span class="demo-code-line dc-dim"># Sesión — 2026-03-28</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-dim">---</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-time">### 14:32:10</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line"><span class="dc-bold">**Objetivo:**</span><span class="dc-muted"> Implementar: añadir autenticación JWT</span></span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-quote">&gt; **Usuario:** Añade JWT auth a la API Express</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-bold">**Resultado:**</span>
+          <span class="demo-code-line dc-muted">  - Middleware valida Bearer token en cada petición</span>
+          <span class="demo-code-line dc-muted">  - Devuelve 401 si el token es inválido</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-bold">**Archivos:**</span>
+          <span class="demo-code-line"><span class="dc-muted">  - Creados: </span><span class="dc-code">`auth.middleware.ts`</span></span>
         </div>
       </div>
-      <!-- Summary -->
-      <div class="editor-window">
-        <div class="editor-topbar">
-          <div class="editor-dots">
-            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-          </div>
-          <div class="editor-tabs">
-            <div class="editor-tab active">/summary</div>
-          </div>
-          <button class="editor-copy-btn" data-copy="summary" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+    </div>
+    <!-- Panel: resumen del día -->
+    <div class="demo-editor fade-in" id="panel-summary" style="display:none">
+      <div class="demo-editor-bar">
+        <span class="term-dot r"></span>
+        <span class="term-dot y"></span>
+        <span class="term-dot g"></span>
+        <span class="demo-editor-tab">summary/2026-03-28.md</span>
+      </div>
+      <div class="demo-editor-body">
+        <div class="line-numbers">
+          <span>1</span><span>2</span><span>3</span><span>4</span>
+          <span>5</span><span>6</span><span>7</span><span>8</span>
+          <span>9</span><span>10</span><span>11</span><span>12</span>
         </div>
-        <div class="code-body" id="summary-code">
-          <div class="code-line"><span class="ln">1</span><span class="code-content m">## RESUMEN DEL DÍA — 2026-03-28</span></div>
-          <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Proyecto:**</span> <span class="t">mi-api</span></span></div>
-          <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="k">**Sesión:**</span> <span class="g">09:15:04 → 17:48:22</span></span></div>
-          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">**Turnos completados:**</span> <span class="n">12</span></span></div>
-          <div class="code-line"><span class="ln">6</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">7</span><span class="code-content m">### Objetivos trabajados</span></div>
-          <div class="code-line"><span class="ln">8</span><span class="code-content"><span class="n">1.</span> <span class="t">Scaffolding inicial del proyecto</span></span></div>
-          <div class="code-line"><span class="ln">9</span><span class="code-content"><span class="n">2.</span> <span class="t">Corregir error CORS del frontend</span></span></div>
-          <div class="code-line"><span class="ln">10</span><span class="code-content"><span class="n">3.</span> <span class="t">Middleware de autenticación JWT</span></span></div>
-          <div class="code-line"><span class="ln">11</span><span class="code-content"><span class="c">   ...</span></span></div>
-          <div class="code-line"><span class="ln">12</span><span class="code-content">&nbsp;</span></div>
-          <div class="code-line"><span class="ln">13</span><span class="code-content m">### Para el siguiente turno</span></div>
-          <div class="code-line"><span class="ln">14</span><span class="code-content"><span class="t">- Revisar: </span><span class="p">`auth.middleware.ts`</span><span class="t">, </span><span class="p">`app.ts`</span></span></div>
-          <div class="code-line"><span class="ln">15</span><span class="code-content"><span class="t">- Último objetivo: </span><span class="k">Auth JWT</span></span></div>
-          <div class="code-line"><span class="ln">16</span><span class="code-content"><span class="t">- Continuar desde: </span><span class="g">17:48:22</span></span></div>
+        <div class="demo-code">
+          <span class="demo-code-line dc-time"># Resumen — 2026-03-28</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-bold">## Sesiones del día: 3</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-quote">- 09:12 → Refactor del módulo de usuarios</span>
+          <span class="demo-code-line dc-quote">- 11:45 → Corrección de tests fallidos en CI</span>
+          <span class="demo-code-line dc-quote">- 14:32 → Autenticación JWT en API Express</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-bold">## Archivos más activos:</span>
+          <span class="demo-code-line dc-muted">  - app.ts · routes/api.ts · auth.middleware.ts</span>
+          <span class="demo-code-line">&nbsp;</span>
+          <span class="demo-code-line dc-dim"><!-- generado por autodoc --></span>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── CONFIG ─── -->
+<!-- ─── PARA QUIÉN ─── -->
+<section id="audience">
+  <div class="container">
+    <h2 class="section-title fade-in" data-i18n="audience_title">¿Para quién es?</h2>
+    <div class="audience-list fade-in">
+      <div class="audience-item">
+        <span class="audience-icon">🧑‍💻</span>
+        <div class="audience-text">
+          <strong data-i18n="aud_1_title">Solo dev</strong>
+          <span data-i18n="aud_1_desc">Tu memoria entre sesiones. Nunca más "¿dónde lo dejé?"</span>
+        </div>
+      </div>
+      <div class="audience-item">
+        <span class="audience-icon">👥</span>
+        <div class="audience-text">
+          <strong data-i18n="aud_2_title">Equipo</strong>
+          <span data-i18n="aud_2_desc">Traspasos sin fricción. El próximo dev sabe exactamente qué pasó.</span>
+        </div>
+      </div>
+      <div class="audience-item">
+        <span class="audience-icon">🌐</span>
+        <div class="audience-text">
+          <strong data-i18n="aud_3_title">Open Source</strong>
+          <span data-i18n="aud_3_desc">Contribuciones AI trazables. Historial de decisiones automatizado.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CONFIGURACIÓN ─── -->
 <section id="config">
   <div class="container">
-    <div class="fade-in">
-      <span class="section-label" data-i18n="section_config_label">Configuración</span>
-      <h2 data-i18n="section_config_h2">Un JSON. Todo el control.</h2>
-      <p data-i18n="section_config_p">Edita <code style="color:var(--accent-lt);font-family:monospace">Claude_Scripts/autodoc.config.json</code> para adaptar AutoDoc a tu proyecto.</p>
-    </div>
-    <div class="config-grid fade-in">
-      <div class="editor-window">
-        <div class="editor-topbar">
-          <div class="editor-dots">
-            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-          </div>
-          <div class="editor-tabs">
-            <div class="editor-tab active">autodoc.config.json</div>
-          </div>
-          <button class="editor-copy-btn" data-copy="config" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+    <h2 class="section-title fade-in" data-i18n="config_title">Configura en segundos</h2>
+    <div class="config-wrap fade-in">
+      <div class="config-editor">
+        <div class="config-bar">
+          <span class="config-title">autodoc.config.json</span>
+          <button class="btn-copy-config" id="btn-copy-config" data-i18n="config_copy">Copiar config</button>
         </div>
-        <div class="code-body" id="config-code">
-          <div class="code-line"><span class="ln">1</span><span class="code-content t">{</span></div>
-          <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="t">  </span><span class="f">"lang"</span><span class="t">: </span><span class="s">"es"</span><span class="t">,</span></span></div>
-          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="t">  </span><span class="f">"docs_dir"</span><span class="t">: </span><span class="s">"docs"</span><span class="t">,</span></span></div>
-          <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="t">  </span><span class="f">"max_summary_lines"</span><span class="t">: </span><span class="n">3</span><span class="t">,</span></span></div>
-          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="t">  </span><span class="f">"max_changes_in_summary"</span><span class="t">: </span><span class="n">15</span><span class="t">,</span></span></div>
-          <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">  </span><span class="f">"min_message_length"</span><span class="t">: </span><span class="n">30</span><span class="t">,</span></span></div>
-          <div class="code-line"><span class="ln">7</span><span class="code-content"><span class="t">  </span><span class="f">"skip_read_only_turns"</span><span class="t">: </span><span class="k">true</span></span></div>
-          <div class="code-line"><span class="ln">8</span><span class="code-content t">}</span></div>
-        </div>
-      </div>
-      <div class="config-annotations">
-        <div class="annotation">
-          <code>"lang"</code>
-          <p data-i18n="cfg_lang"><strong>"es"</strong> o <strong>"en"</strong> — idioma del diario generado. Títulos, verbos y mensajes se adaptan automáticamente.</p>
-        </div>
-        <div class="annotation">
-          <code>"docs_dir"</code>
-          <p data-i18n="cfg_docs_dir">Carpeta donde se escriben los diarios. Puede ser cualquier ruta relativa a la raíz del proyecto.</p>
-        </div>
-        <div class="annotation">
-          <code>"max_summary_lines"</code>
-          <p data-i18n="cfg_max_lines">Líneas extraídas de la respuesta de Claude para el campo Resultado. Ajusta según tus preferencias de verbosidad.</p>
-        </div>
-        <div class="annotation">
-          <code>"min_message_length"</code>
-          <p data-i18n="cfg_min_len">Mínimo de caracteres en el mensaje del usuario para activar el log. Evita registrar turnos triviales.</p>
-        </div>
-        <div class="annotation">
-          <code>"skip_read_only_turns"</code>
-          <p data-i18n="cfg_skip_ro"><strong>true</strong> omite turnos donde Claude solo leyó archivos sin modificar nada. Mantiene el diario limpio.</p>
+        <div class="config-body" id="config-body">
+<span class="cfg-punct">{</span>
+  <span class="cfg-key">"lang"</span><span class="cfg-punct">:</span> <span class="cfg-val">"es"</span><span class="cfg-punct">,</span>           <span class="cfg-comment">// "es" o "en"</span>
+  <span class="cfg-key">"docs_dir"</span><span class="cfg-punct">:</span> <span class="cfg-val">"docs"</span><span class="cfg-punct">,</span>        <span class="cfg-comment">// carpeta de salida</span>
+  <span class="cfg-key">"max_summary_lines"</span><span class="cfg-punct">:</span> <span class="cfg-num">5</span><span class="cfg-punct">,</span>   <span class="cfg-comment">// líneas por resumen</span>
+  <span class="cfg-key">"include_tokens"</span><span class="cfg-punct">:</span> <span class="cfg-val">true</span><span class="cfg-punct">,</span>  <span class="cfg-comment">// mostrar uso de tokens</span>
+  <span class="cfg-key">"date_format"</span><span class="cfg-punct">:</span> <span class="cfg-val">"YYYY-MM-DD"</span>  <span class="cfg-comment">// formato de fecha</span>
+<span class="cfg-punct">}</span>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── FOR WHOM ─── -->
-<section id="for-whom">
-  <div class="container">
-    <div class="fade-in" style="text-align:center">
-      <span class="section-label" data-i18n="section_whom_label">Para quién es</span>
-      <h2 data-i18n="section_whom_h2">Hecho para quienes construyen.</h2>
-      <p data-i18n="section_whom_p">Si usas Claude Code, AutoDoc es para ti. Sin importar el tamaño de tu equipo.</p>
-    </div>
-    <div class="cards-grid fade-in">
-      <div class="whom-card">
-        <div class="whom-icon"><i class="fa-solid fa-user-astronaut"></i></div>
-        <h3 data-i18n="whom1_h">Desarrolladores en solitario</h3>
-        <p data-i18n="whom1_p" style="font-size:.88rem;margin-bottom:.75rem">Tu memoria externa. Nunca más pierdas el hilo entre sesiones.</p>
-        <ul>
-          <li data-i18n="whom1_li1">Retoma exactamente donde lo dejaste</li>
-          <li data-i18n="whom1_li2">Historial de cambios por archivo</li>
-          <li data-i18n="whom1_li3">Métricas de tokens por sesión</li>
-        </ul>
-      </div>
-      <div class="whom-card">
-        <div class="whom-icon"><i class="fa-solid fa-users"></i></div>
-        <h3 data-i18n="whom2_h">Equipos de desarrollo</h3>
-        <p data-i18n="whom2_p" style="font-size:.88rem;margin-bottom:.75rem">Traspasos de turno sin fricción. El siguiente sabe exactamente qué hiciste.</p>
-        <ul>
-          <li data-i18n="whom2_li1">Diario compartido en el repositorio</li>
-          <li data-i18n="whom2_li2">Resumen del día en un comando</li>
-          <li data-i18n="whom2_li3">Trazabilidad de decisiones de Claude</li>
-        </ul>
-      </div>
-      <div class="whom-card">
-        <div class="whom-icon"><i class="fa-brands fa-github"></i></div>
-        <h3 data-i18n="whom3_h">Contribuidores Open Source</h3>
-        <p data-i18n="whom3_p" style="font-size:.88rem;margin-bottom:.75rem">Documenta tus contribuciones AI-assisted de forma transparente y trazable.</p>
-        <ul>
-          <li data-i18n="whom3_li1">Auditoría de cambios asistidos por IA</li>
-          <li data-i18n="whom3_li2">Soporte ES &amp; EN integrado</li>
-          <li data-i18n="whom3_li3">Extensible a nuevos lenguajes</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── INSTALL ─── -->
+<!-- ─── INSTALACIÓN ─── -->
 <section id="install">
   <div class="container">
-    <div class="fade-in">
-      <span class="section-label" data-i18n="section_install_label">Instalación</span>
-      <h2 data-i18n="section_install_h2">En marcha en 60 segundos.</h2>
-      <p data-i18n="section_install_p">Un solo comando instala AutoDoc en cualquier proyecto existente.</p>
+    <h2 class="section-title fade-in" data-i18n="install_title">Listo en 60 segundos</h2>
+    <div class="install-tabs fade-in">
+      <button class="install-tab active" id="itab-unix" data-i18n="install_tab_unix">macOS / Linux</button>
+      <button class="install-tab" id="itab-win" data-i18n="install_tab_win">Windows</button>
     </div>
-    <div class="fade-in" style="margin-top:2.5rem">
-      <div class="install-tabs">
-        <button class="tab-btn active" data-tab="mac" data-i18n="tab_mac">macOS / Linux</button>
-        <button class="tab-btn" data-tab="win" data-i18n="tab_win">Windows</button>
-      </div>
-      <!-- macOS/Linux -->
-      <div class="tab-panel active" id="tab-mac">
-        <div class="editor-window">
-          <div class="editor-topbar">
-            <div class="editor-dots">
-              <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-            </div>
-            <div class="editor-tabs">
-              <div class="editor-tab active">bash</div>
-            </div>
-            <button class="editor-copy-btn" data-copy="install-mac" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
-          </div>
-          <div class="code-body" id="install-mac-code">
-            <div class="code-line"><span class="ln">1</span><span class="code-content c"># Descarga AutoDoc</span></div>
-            <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="k">git clone</span> <span class="s">https://github.com/David01mc/autodoc.git</span></span></div>
-            <div class="code-line"><span class="ln">3</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">4</span><span class="code-content c"># Instala en tu proyecto (reemplaza la ruta)</span></div>
-            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">bash</span> <span class="p">autodoc/install.sh</span> <span class="s">/ruta/a/tu-proyecto</span></span></div>
-          </div>
+
+    <!-- Unix panel -->
+    <div class="install-panel active fade-in" id="ipanel-unix">
+      <div class="code-block">
+        <div class="code-block-bar">
+          <span class="code-block-label">bash</span>
+          <button class="btn-copy" data-copy-id="cmd-unix" data-i18n="copy_btn">Copiar</button>
         </div>
+        <div class="code-block-body" id="cmd-unix"><span class="cmd-comment"># 1. Clona el repositorio</span>
+<span class="cmd-dollar">$</span> git clone https://github.com/David01mc/autodoc.git ~/.claude/autodoc
+
+<span class="cmd-comment"># 2. Instala dependencias</span>
+<span class="cmd-dollar">$</span> pip install -r ~/.claude/autodoc/requirements.txt
+
+<span class="cmd-comment"># 3. Registra el hook en Claude Code</span>
+<span class="cmd-dollar">$</span> cat >> ~/.claude/settings.json &lt;&lt;'EOF'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/autodoc/log_activity.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF</div>
       </div>
-      <!-- Windows -->
-      <div class="tab-panel" id="tab-win">
-        <div class="editor-window">
-          <div class="editor-topbar">
-            <div class="editor-dots">
-              <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-            </div>
-            <div class="editor-tabs">
-              <div class="editor-tab active">cmd / PowerShell</div>
-            </div>
-            <button class="editor-copy-btn" data-copy="install-win" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
-          </div>
-          <div class="code-body" id="install-win-code">
-            <div class="code-line"><span class="ln">1</span><span class="code-content c">:: Descarga AutoDoc</span></div>
-            <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="k">git clone</span> <span class="s">https://github.com/David01mc/autodoc.git</span></span></div>
-            <div class="code-line"><span class="ln">3</span><span class="code-content">&nbsp;</span></div>
-            <div class="code-line"><span class="ln">4</span><span class="code-content c">:: Instala en tu proyecto (reemplaza la ruta)</span></div>
-            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="p">autodoc\install.bat</span> <span class="s">C:\ruta\a\tu-proyecto</span></span></div>
-          </div>
+
+      <div class="accordion">
+        <div class="accordion-header" id="acc-header-unix">
+          <span data-i18n="accordion_manual">Instalación manual del hook</span>
+          <svg class="accordion-arrow" id="acc-arrow-unix" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-      </div>
-      <!-- Manual accordion -->
-      <div class="accordion" id="manual-accordion">
-        <div class="accordion-header" id="acc-header">
-          <h3 data-i18n="acc_title"><i class="fa-solid fa-wrench" style="color:var(--accent);margin-right:.5rem"></i>Instalación manual (paso a paso)</h3>
-          <i class="fa-solid fa-chevron-down accordion-arrow"></i>
-        </div>
-        <div class="accordion-body">
-          <ol>
-            <li data-i18n="acc_step1">Copia <code style="color:var(--accent-lt);font-family:monospace">Claude_Scripts/</code> y <code style="color:var(--accent-lt);font-family:monospace">.claude/commands/</code> en la raíz de tu proyecto.</li>
-            <li data-i18n="acc_step2">Crea o edita <code style="color:var(--accent-lt);font-family:monospace">.claude/settings.local.json</code> con el siguiente hook:</li>
-          </ol>
-          <div class="editor-window" style="margin-top:1rem">
-            <div class="editor-topbar">
-              <div class="editor-dots">
-                <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
-              </div>
-              <div class="editor-tabs">
-                <div class="editor-tab active">.claude/settings.local.json</div>
-              </div>
-              <button class="editor-copy-btn" data-copy="manual-hook" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
-            </div>
-            <div class="code-body" id="manual-hook-code">
-              <div class="code-line"><span class="ln">1</span><span class="code-content t">{</span></div>
-              <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="t">  </span><span class="f">"hooks"</span><span class="t">: {</span></span></div>
-              <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="t">    </span><span class="f">"Stop"</span><span class="t">: [</span></span></div>
-              <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="t">      { </span><span class="f">"hooks"</span><span class="t">: [{</span></span></div>
-              <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="t">        </span><span class="f">"type"</span><span class="t">: </span><span class="s">"command"</span><span class="t">,</span></span></div>
-              <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">        </span><span class="f">"command"</span><span class="t">: </span><span class="s">"python Claude_Scripts/log_activity.py"</span><span class="t">,</span></span></div>
-              <div class="code-line"><span class="ln">7</span><span class="code-content"><span class="t">        </span><span class="f">"timeout"</span><span class="t">: </span><span class="n">15</span></span></div>
-              <div class="code-line"><span class="ln">8</span><span class="code-content t">      }]}]</span></div>
-              <div class="code-line"><span class="ln">9</span><span class="code-content t">  }}</span></div>
-            </div>
+        <div class="accordion-body" id="acc-body-unix">
+          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text);">
+<span class="cfg-comment">// ~/.claude/settings.json</span>
+<span class="cfg-punct">{</span>
+  <span class="cfg-key">"hooks"</span><span class="cfg-punct">: {</span>
+    <span class="cfg-key">"Stop"</span><span class="cfg-punct">: [</span>
+      <span class="cfg-punct">{</span>
+        <span class="cfg-key">"matcher"</span><span class="cfg-punct">:</span> <span class="cfg-val">""</span><span class="cfg-punct">,</span>
+        <span class="cfg-key">"hooks"</span><span class="cfg-punct">: [</span>
+          <span class="cfg-punct">{</span>
+            <span class="cfg-key">"type"</span><span class="cfg-punct">:</span> <span class="cfg-val">"command"</span><span class="cfg-punct">,</span>
+            <span class="cfg-key">"command"</span><span class="cfg-punct">:</span> <span class="cfg-val">"python3 ~/.claude/autodoc/log_activity.py"</span>
+          <span class="cfg-punct">}</span>
+        <span class="cfg-punct">]</span>
+      <span class="cfg-punct">}</span>
+    <span class="cfg-punct">]</span>
+  <span class="cfg-punct">}</span>
+<span class="cfg-punct">}</span>
           </div>
-          <p style="margin-top:.75rem;font-size:.88rem" data-i18n="acc_done">Listo. Abre el proyecto en Claude Code y empieza a trabajar.</p>
         </div>
       </div>
     </div>
+
+    <!-- Windows panel -->
+    <div class="install-panel fade-in" id="ipanel-win">
+      <div class="code-block">
+        <div class="code-block-bar">
+          <span class="code-block-label">powershell</span>
+          <button class="btn-copy" data-copy-id="cmd-win" data-i18n="copy_btn">Copiar</button>
+        </div>
+        <div class="code-block-body" id="cmd-win"><span class="cmd-comment"># 1. Clona el repositorio</span>
+<span class="cmd-dollar">$</span> git clone https://github.com/David01mc/autodoc.git $env:USERPROFILE\.claude\autodoc
+
+<span class="cmd-comment"># 2. Instala dependencias</span>
+<span class="cmd-dollar">$</span> pip install -r $env:USERPROFILE\.claude\autodoc\requirements.txt
+
+<span class="cmd-comment"># 3. Abre settings.json en tu editor</span>
+<span class="cmd-dollar">$</span> notepad $env:USERPROFILE\.claude\settings.json</div>
+      </div>
+
+      <div class="accordion">
+        <div class="accordion-header" id="acc-header-win">
+          <span data-i18n="accordion_manual">Instalación manual del hook</span>
+          <svg class="accordion-arrow" id="acc-arrow-win" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="accordion-body" id="acc-body-win">
+          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text);">
+<span class="cfg-comment">// %USERPROFILE%\.claude\settings.json</span>
+<span class="cfg-punct">{</span>
+  <span class="cfg-key">"hooks"</span><span class="cfg-punct">: {</span>
+    <span class="cfg-key">"Stop"</span><span class="cfg-punct">: [</span>
+      <span class="cfg-punct">{</span>
+        <span class="cfg-key">"matcher"</span><span class="cfg-punct">:</span> <span class="cfg-val">""</span><span class="cfg-punct">,</span>
+        <span class="cfg-key">"hooks"</span><span class="cfg-punct">: [</span>
+          <span class="cfg-punct">{</span>
+            <span class="cfg-key">"type"</span><span class="cfg-punct">:</span> <span class="cfg-val">"command"</span><span class="cfg-punct">,</span>
+            <span class="cfg-key">"command"</span><span class="cfg-punct">:</span> <span class="cfg-val">"python %USERPROFILE%\\.claude\\autodoc\\log_activity.py"</span>
+          <span class="cfg-punct">}</span>
+        <span class="cfg-punct">]</span>
+      <span class="cfg-punct">}</span>
+    <span class="cfg-punct">]</span>
+  <span class="cfg-punct">}</span>
+<span class="cfg-punct">}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="install-note fade-in" data-i18n="install_note">Requiere <strong>Python 3.8+</strong> y <strong>Claude Code CLI</strong></p>
   </div>
 </section>
 
 <!-- ─── FOOTER ─── -->
 <footer>
-  <div class="container">
-    <p class="footer-tagline" data-i18n="footer_tagline">
-      Lo que te llevás hoy: <span class="accent">nunca más perderás el hilo de una sesión.</span>
-    </p>
-    <p class="footer-sub" data-i18n="footer_sub">AutoDoc transforma el trabajo olvidado en conocimiento persistente.</p>
-    <div class="footer-links">
-      <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener">
-        <i class="fa-brands fa-github"></i> GitHub
-      </a>
-      <a href="https://github.com/David01mc/autodoc/issues" target="_blank" rel="noopener">
-        <i class="fa-solid fa-bug"></i> <span data-i18n="footer_issues">Issues</span>
-      </a>
-      <a href="https://github.com/David01mc/autodoc/pulls" target="_blank" rel="noopener">
-        <i class="fa-solid fa-code-pull-request"></i> <span data-i18n="footer_prs">Pull Requests</span>
-      </a>
-      <a href="https://github.com/David01mc/autodoc/blob/main/README.md" target="_blank" rel="noopener">
-        <i class="fa-solid fa-book"></i> <span data-i18n="footer_docs">Documentación</span>
-      </a>
-    </div>
-    <p class="footer-meta">
-      MIT License &nbsp;·&nbsp; <span data-i18n="footer_built">Hecho con</span> <i class="fa-solid fa-heart" style="color:#ef4444"></i> <span data-i18n="footer_for">para la comunidad de Claude Code</span>
-    </p>
-  </div>
+  <a href="#hero" class="footer-logo">
+    <span class="logo-bracket">&lt;/&gt;</span>
+    AutoDoc
+  </a>
+  <ul class="footer-links">
+    <li><a href="#how" data-i18n="nav_how">Cómo funciona</a></li>
+    <li><a href="#demo" data-i18n="nav_demo">Demo</a></li>
+    <li><a href="#install" data-i18n="nav_install_link">Instalación</a></li>
+    <li><a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener">GitHub</a></li>
+  </ul>
+  <p class="footer-by">
+    <span data-i18n="footer_by">Creado por</span>
+    <a href="https://github.com/David01mc" target="_blank" rel="noopener">David</a>
+    <span data-i18n="footer_by2"> — desarrollador que usa Claude Code a diario.</span>
+  </p>
+  <p class="footer-meta">MIT License · © 2026 AutoDoc</p>
+  <p class="footer-final" data-i18n="footer_final">Lo que te llevas: nunca más perderás el hilo de una sesión de Claude Code.</p>
 </footer>
 
+<!-- ─── STICKY CTA ─── -->
+<button class="sticky-cta" id="sticky-cta" onclick="document.getElementById('install').scrollIntoView({behavior:'smooth'})">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3l3.293 3.293-7 7 1.414 1.414 7-7L21 11V3z"/><path d="M19 19H5V5h7l-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7l-2-2v9z"/></svg>
+  <span data-i18n="sticky_cta">Instalar</span>
+</button>
+
 <script>
-/* ══════════════════════════════════════════════
-   i18n — strings
-══════════════════════════════════════════════ */
-const i18n = {
-  es: {
-    nav_problem: "El problema",
-    nav_how: "Cómo funciona",
-    nav_demo: "Demo",
-    nav_install: "Instalar",
-    badge_tokens: "0 tokens extra",
-    hero_h1_1: "Tu código ya está",
-    hero_h1_accent: "documentado.",
-    hero_h1_2: "Solo que aún no lo sabías.",
-    hero_sub: "AutoDoc se engancha al evento <strong>Stop</strong> de Claude Code y escribe el diario de tu sesión automáticamente. Sin tokens extra. Sin esfuerzo manual. Listo para el próximo desarrollador.",
-    cta_install: "Instalar en 60 segundos",
-    cta_github: "Ver en GitHub",
-    stat_tokens: "tokens extra",
-    stat_install: "instalación",
-    stat_langs: "idiomas",
-    stat_free: "gratis & open source",
-    section_problem_label: "El problema",
-    section_problem_h2: "¿Cuántas veces empezaste el día<br/>sin saber dónde lo dejaste?",
-    section_problem_p: "Sin AutoDoc, reconstruir el contexto de ayer te cuesta tiempo, tokens y frustración. Con AutoDoc, el diario ya está escrito.",
-    before_label: "Sin AutoDoc",
-    after_label: "Con AutoDoc",
-    section_how_label: "Cómo funciona",
-    section_how_h2: "Tres pasos. Cero interrupciones.",
-    section_how_p: "AutoDoc se instala una vez y trabaja en silencio. Tú trabajas con Claude Code exactamente igual que siempre.",
-    step1_h: "Instalas AutoDoc",
-    step1_p: "Ejecuta <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.sh</code> o <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.bat</code> apuntando a tu proyecto. En 60 segundos está listo.",
-    step2_h: "Trabajas como siempre",
-    step2_p: "Abre Claude Code y trabaja exactamente igual. AutoDoc opera en el fondo, invisible. No cambia nada de tu flujo.",
-    step3_h: "El diario se escribe solo",
-    step3_p: "Tras cada respuesta de Claude, una entrada estructurada se añade a <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>docs/YYYY-MM-DD.md</code>. Automáticamente.",
-    surprise_strong: "Sin llamadas a la API. Sin tokens. Completamente gratis.",
-    surprise_p: "AutoDoc lee la transcripción local del hook <code style='color:var(--accent-lt);font-family:monospace'>Stop</code> de Claude Code. No hace ninguna petición a Anthropic. Cada entrada del diario cuesta exactamente 0 tokens adicionales.",
-    section_demo_label: "Demo en vivo",
-    section_demo_h2: "Así se ve el diario generado",
-    section_demo_p: "Una entrada real después de una sesión de trabajo. Y el resumen del día con <code style='color:var(--accent-lt);font-family:monospace'>/summary</code>.",
-    copy_btn: "Copiar",
-    section_config_label: "Configuración",
-    section_config_h2: "Un JSON. Todo el control.",
-    section_config_p: "Edita <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/autodoc.config.json</code> para adaptar AutoDoc a tu proyecto.",
-    cfg_lang: "<strong>\"es\"</strong> o <strong>\"en\"</strong> — idioma del diario generado. Títulos, verbos y mensajes se adaptan automáticamente.",
-    cfg_docs_dir: "Carpeta donde se escriben los diarios. Puede ser cualquier ruta relativa a la raíz del proyecto.",
-    cfg_max_lines: "Líneas extraídas de la respuesta de Claude para el campo Resultado. Ajusta según tus preferencias de verbosidad.",
-    cfg_min_len: "Mínimo de caracteres en el mensaje del usuario para activar el log. Evita registrar turnos triviales.",
-    cfg_skip_ro: "<strong>true</strong> omite turnos donde Claude solo leyó archivos sin modificar nada. Mantiene el diario limpio.",
-    section_whom_label: "Para quién es",
-    section_whom_h2: "Hecho para quienes construyen.",
-    section_whom_p: "Si usas Claude Code, AutoDoc es para ti. Sin importar el tamaño de tu equipo.",
-    whom1_h: "Desarrolladores en solitario",
-    whom1_p: "Tu memoria externa. Nunca más pierdas el hilo entre sesiones.",
-    whom1_li1: "Retoma exactamente donde lo dejaste",
-    whom1_li2: "Historial de cambios por archivo",
-    whom1_li3: "Métricas de tokens por sesión",
-    whom2_h: "Equipos de desarrollo",
-    whom2_p: "Traspasos de turno sin fricción. El siguiente sabe exactamente qué hiciste.",
-    whom2_li1: "Diario compartido en el repositorio",
-    whom2_li2: "Resumen del día en un comando",
-    whom2_li3: "Trazabilidad de decisiones de Claude",
-    whom3_h: "Contribuidores Open Source",
-    whom3_p: "Documenta tus contribuciones AI-assisted de forma transparente y trazable.",
-    whom3_li1: "Auditoría de cambios asistidos por IA",
-    whom3_li2: "Soporte ES & EN integrado",
-    whom3_li3: "Extensible a nuevos lenguajes",
-    section_install_label: "Instalación",
-    section_install_h2: "En marcha en 60 segundos.",
-    section_install_p: "Un solo comando instala AutoDoc en cualquier proyecto existente.",
-    tab_mac: "macOS / Linux",
-    tab_win: "Windows",
-    acc_title: "<i class='fa-solid fa-wrench' style='color:var(--accent);margin-right:.5rem'></i>Instalación manual (paso a paso)",
-    acc_step1: "Copia <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/</code> y <code style='color:var(--accent-lt);font-family:monospace'>.claude/commands/</code> en la raíz de tu proyecto.",
-    acc_step2: "Crea o edita <code style='color:var(--accent-lt);font-family:monospace'>.claude/settings.local.json</code> con el siguiente hook:",
-    acc_done: "Listo. Abre el proyecto en Claude Code y empieza a trabajar.",
-    footer_tagline: "Lo que te llevás hoy: <span class='accent'>nunca más perderás el hilo de una sesión.</span>",
-    footer_sub: "AutoDoc transforma el trabajo olvidado en conocimiento persistente.",
-    footer_issues: "Issues",
-    footer_prs: "Pull Requests",
-    footer_docs: "Documentación",
-    footer_built: "Hecho con",
-    footer_for: "para la comunidad de Claude Code"
-  },
-  en: {
-    nav_problem: "The problem",
-    nav_how: "How it works",
-    nav_demo: "Demo",
-    nav_install: "Install",
-    badge_tokens: "0 extra tokens",
-    hero_h1_1: "Your code is already",
-    hero_h1_accent: "documented.",
-    hero_h1_2: "You just didn't know it yet.",
-    hero_sub: "AutoDoc hooks into the <strong>Stop</strong> event of Claude Code and writes your session diary automatically. No extra tokens. No manual effort. Ready for the next developer.",
-    cta_install: "Install in 60 seconds",
-    cta_github: "View on GitHub",
-    stat_tokens: "extra tokens",
-    stat_install: "installation",
-    stat_langs: "languages",
-    stat_free: "free & open source",
-    section_problem_label: "The problem",
-    section_problem_h2: "How many times did you start the day<br/>not knowing where you left off?",
-    section_problem_p: "Without AutoDoc, rebuilding yesterday's context costs you time, tokens and frustration. With AutoDoc, the diary is already written.",
-    before_label: "Without AutoDoc",
-    after_label: "With AutoDoc",
-    section_how_label: "How it works",
-    section_how_h2: "Three steps. Zero interruptions.",
-    section_how_p: "AutoDoc installs once and works silently. You work with Claude Code exactly as always.",
-    step1_h: "Install AutoDoc",
-    step1_p: "Run <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.sh</code> or <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.bat</code> pointing to your project. Ready in 60 seconds.",
-    step2_h: "Work as always",
-    step2_p: "Open Claude Code and work exactly the same. AutoDoc runs in the background, invisible. Nothing in your workflow changes.",
-    step3_h: "The diary writes itself",
-    step3_p: "After each Claude response, a structured entry is added to <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>docs/YYYY-MM-DD.md</code>. Automatically.",
-    surprise_strong: "No API calls. No tokens. Completely free.",
-    surprise_p: "AutoDoc reads the local transcript from the <code style='color:var(--accent-lt);font-family:monospace'>Stop</code> hook of Claude Code. It makes no requests to Anthropic. Each diary entry costs exactly 0 additional tokens.",
-    section_demo_label: "Live demo",
-    section_demo_h2: "This is what the generated diary looks like",
-    section_demo_p: "A real entry after a work session. And the day summary with <code style='color:var(--accent-lt);font-family:monospace'>/summary</code>.",
-    copy_btn: "Copy",
-    section_config_label: "Configuration",
-    section_config_h2: "One JSON. Full control.",
-    section_config_p: "Edit <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/autodoc.config.json</code> to adapt AutoDoc to your project.",
-    cfg_lang: "<strong>\"es\"</strong> or <strong>\"en\"</strong> — language of the generated diary. Section titles, verbs and messages adapt automatically.",
-    cfg_docs_dir: "Folder where diaries are written. Can be any path relative to the project root.",
-    cfg_max_lines: "Lines extracted from Claude's response for the Result field. Adjust to your verbosity preferences.",
-    cfg_min_len: "Minimum characters in the user message to trigger the log. Avoids logging trivial turns.",
-    cfg_skip_ro: "<strong>true</strong> skips turns where Claude only read files without modifying anything. Keeps the diary clean.",
-    section_whom_label: "Who it's for",
-    section_whom_h2: "Built for those who build.",
-    section_whom_p: "If you use Claude Code, AutoDoc is for you. Regardless of your team size.",
-    whom1_h: "Solo developers",
-    whom1_p: "Your external memory. Never lose the thread between sessions again.",
-    whom1_li1: "Resume exactly where you left off",
-    whom1_li2: "Change history per file",
-    whom1_li3: "Token metrics per session",
-    whom2_h: "Development teams",
-    whom2_p: "Frictionless shift handoffs. The next person knows exactly what you did.",
-    whom2_li1: "Shared diary in the repository",
-    whom2_li2: "Day summary in one command",
-    whom2_li3: "Traceability of Claude's decisions",
-    whom3_h: "Open Source contributors",
-    whom3_p: "Document your AI-assisted contributions in a transparent and traceable way.",
-    whom3_li1: "Audit of AI-assisted changes",
-    whom3_li2: "Built-in ES & EN support",
-    whom3_li3: "Extensible to new languages",
-    section_install_label: "Installation",
-    section_install_h2: "Up and running in 60 seconds.",
-    section_install_p: "A single command installs AutoDoc into any existing project.",
-    tab_mac: "macOS / Linux",
-    tab_win: "Windows",
-    acc_title: "<i class='fa-solid fa-wrench' style='color:var(--accent);margin-right:.5rem'></i>Manual installation (step by step)",
-    acc_step1: "Copy <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/</code> and <code style='color:var(--accent-lt);font-family:monospace'>.claude/commands/</code> to your project root.",
-    acc_step2: "Create or edit <code style='color:var(--accent-lt);font-family:monospace'>.claude/settings.local.json</code> with the following hook:",
-    acc_done: "Done. Open the project in Claude Code and start working.",
-    footer_tagline: "What you take away today: <span class='accent'>you'll never lose the thread of a session again.</span>",
-    footer_sub: "AutoDoc transforms forgotten work into persistent knowledge.",
-    footer_issues: "Issues",
-    footer_prs: "Pull Requests",
-    footer_docs: "Documentation",
-    footer_built: "Made with",
-    footer_for: "for the Claude Code community"
-  }
-};
-
-/* Copy-text raw strings for clipboard */
-const copyTexts = {
-  diary: `### 14:32:10
-
-**Objetivo:** Implementar: middleware auth JWT
-
-> **Usuario:** Añade auth JWT a la API,
-verifica el token en cada ruta protegida
-
-**Resultado:**
-  - Middleware valida Bearer token
-  - Devuelve 401 si token inválido
-
-**Archivos:**
-  - Creados: \`auth.middleware.ts\`
-  - Modificados: \`app.ts\`, \`routes/api.ts\`
-
-**Cambios en código:**
-  - \`auth.middleware.ts\` creado (45 líneas): verifyToken, authMiddleware
-  - \`app.ts\`: añadido applyMiddleware
-
-\`3xEdit, 1xWrite, 1xRead\`
-\`Tokens: 2.1k (in:1.4k, out:0.7k)\`
-\`Sesión total: 18.3k\``,
-  summary: `## RESUMEN DEL DÍA — 2026-03-28
-
-**Proyecto:** mi-api
-**Sesión:** 09:15:04 → 17:48:22
-**Turnos completados:** 12
-
-### Objetivos trabajados
-1. Scaffolding inicial del proyecto
-2. Corregir error CORS del frontend
-3. Middleware de autenticación JWT
-   ...
-
-### Para el siguiente turno
-- Revisar: \`auth.middleware.ts\`, \`app.ts\`
-- Último objetivo: Auth JWT
-- Continuar desde: 17:48:22`,
-  config: `{
-  "lang": "es",
-  "docs_dir": "docs",
-  "max_summary_lines": 3,
-  "max_changes_in_summary": 15,
-  "min_message_length": 30,
-  "skip_read_only_turns": true
-}`,
-  "install-mac": `# Descarga AutoDoc
-git clone https://github.com/David01mc/autodoc.git
-
-# Instala en tu proyecto (reemplaza la ruta)
-bash autodoc/install.sh /ruta/a/tu-proyecto`,
-  "install-win": `:: Descarga AutoDoc
-git clone https://github.com/David01mc/autodoc.git
-
-:: Instala en tu proyecto (reemplaza la ruta)
-autodoc\\install.bat C:\\ruta\\a\\tu-proyecto`,
-  "manual-hook": `{
-  "hooks": {
-    "Stop": [
-      { "hooks": [{
-        "type": "command",
-        "command": "python Claude_Scripts/log_activity.py",
-        "timeout": 15
-      }]}]
-  }}`
-};
-
-/* ══════════════════════════════════════════════
-   Language switcher
-══════════════════════════════════════════════ */
-let currentLang = 'es';
-
-function setLang(lang) {
-  currentLang = lang;
-  const strings = i18n[lang];
-
-  // Update data-i18n elements
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n;
-    if (strings[key] !== undefined) {
-      el.innerHTML = strings[key];
+  /* ─── I18N ─── */
+  const i18n = {
+    es: {
+      nav_how: 'Cómo funciona',
+      nav_demo: 'Demo',
+      nav_install_link: 'Instalación',
+      nav_cta: 'Instalar',
+      nav_github: 'Star on GitHub',
+      hero_badge: 'OPEN SOURCE · MIT · v1.0',
+      hero_h1: 'Tu código ya está documentado.',
+      hero_h1_line2: 'Solo que aún no lo sabías.',
+      hero_sub: 'Hook de Claude Code. Documenta cada sesión. 0 tokens extra.',
+      cta_install: 'Instalar en 60s',
+      cta_github: 'Ver en GitHub →',
+      stat_0: '0 tokens extra',
+      stat_1: 'Instala en 60s',
+      stat_2: 'ES / EN',
+      stat_3: '100% gratis',
+      social_quote: '"Usado por desarrolladores que trabajan con Claude Code a diario"',
+      problem_title: '¿Cuántas veces empezaste el día sin saber dónde lo dejaste?',
+      problem_without: 'SIN AutoDoc',
+      problem_with: 'CON AutoDoc',
+      how_title: 'Cero configuración. Cero fricción.',
+      flow_1: 'Tu flujo normal',
+      flow_2: 'Evento automático',
+      flow_3: 'Lee transcripción',
+      flow_4: 'Diario generado',
+      how_caption: 'Sin llamadas a la API. Sin tokens. Completamente gratis.',
+      demo_title: 'Mira lo que genera AutoDoc',
+      demo_tab1: 'Entrada individual',
+      demo_tab2: 'Resumen del día',
+      demo_sim: 'Simular sesión',
+      audience_title: '¿Para quién es?',
+      aud_1_title: 'Solo dev',
+      aud_1_desc: 'Tu memoria entre sesiones. Nunca más "¿dónde lo dejé?"',
+      aud_2_title: 'Equipo',
+      aud_2_desc: 'Traspasos sin fricción. El próximo dev sabe exactamente qué pasó.',
+      aud_3_title: 'Open Source',
+      aud_3_desc: 'Contribuciones AI trazables. Historial de decisiones automatizado.',
+      config_title: 'Configura en segundos',
+      config_copy: 'Copiar config',
+      install_title: 'Listo en 60 segundos',
+      install_tab_unix: 'macOS / Linux',
+      install_tab_win: 'Windows',
+      copy_btn: 'Copiar',
+      accordion_manual: 'Instalación manual del hook',
+      install_note: 'Requiere <strong>Python 3.8+</strong> y <strong>Claude Code CLI</strong>',
+      footer_by: 'Creado por',
+      footer_by2: ' — desarrollador que usa Claude Code a diario.',
+      footer_final: 'Lo que te llevas: nunca más perderás el hilo de una sesión de Claude Code.',
+      sticky_cta: 'Instalar',
+    },
+    en: {
+      nav_how: 'How it works',
+      nav_demo: 'Demo',
+      nav_install_link: 'Install',
+      nav_cta: 'Install',
+      nav_github: 'Star on GitHub',
+      hero_badge: 'OPEN SOURCE · MIT · v1.0',
+      hero_h1: 'Your code is already documented.',
+      hero_h1_line2: "You just didn't know it yet.",
+      hero_sub: 'Claude Code hook. Documents every session. 0 extra tokens.',
+      cta_install: 'Install in 60s',
+      cta_github: 'View on GitHub →',
+      stat_0: '0 extra tokens',
+      stat_1: 'Install in 60s',
+      stat_2: 'ES / EN',
+      stat_3: '100% free',
+      social_quote: '"Used by developers who work with Claude Code daily"',
+      problem_title: 'How many times did you start the day not knowing where you left off?',
+      problem_without: 'WITHOUT AutoDoc',
+      problem_with: 'WITH AutoDoc',
+      how_title: 'Zero configuration. Zero friction.',
+      flow_1: 'Your normal flow',
+      flow_2: 'Automatic event',
+      flow_3: 'Reads transcript',
+      flow_4: 'Diary generated',
+      how_caption: 'No API calls. No tokens. Completely free.',
+      demo_title: 'See what AutoDoc generates',
+      demo_tab1: 'Single entry',
+      demo_tab2: "Day's summary",
+      demo_sim: 'Simulate session',
+      audience_title: 'Who is it for?',
+      aud_1_title: 'Solo dev',
+      aud_1_desc: 'Your memory between sessions. Never again "where did I leave off?"',
+      aud_2_title: 'Team',
+      aud_2_desc: 'Frictionless handoffs. The next dev knows exactly what happened.',
+      aud_3_title: 'Open Source',
+      aud_3_desc: 'Traceable AI contributions. Automated decision history.',
+      config_title: 'Configure in seconds',
+      config_copy: 'Copy config',
+      install_title: 'Ready in 60 seconds',
+      install_tab_unix: 'macOS / Linux',
+      install_tab_win: 'Windows',
+      copy_btn: 'Copy',
+      accordion_manual: 'Manual hook installation',
+      install_note: 'Requires <strong>Python 3.8+</strong> and <strong>Claude Code CLI</strong>',
+      footer_by: 'Created by',
+      footer_by2: ' — developer who uses Claude Code daily.',
+      footer_final: 'What you take away: you will never lose the thread of a Claude Code session again.',
+      sticky_cta: 'Install',
     }
+  };
+
+  let currentLang = localStorage.getItem('autodoc_lang') || 'es';
+
+  function applyLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('autodoc_lang', lang);
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (i18n[lang][key] !== undefined) {
+        if (el.innerHTML !== i18n[lang][key]) {
+          el.innerHTML = i18n[lang][key];
+        }
+      }
+    });
+    document.getElementById('lo-es').classList.toggle('active', lang === 'es');
+    document.getElementById('lo-en').classList.toggle('active', lang === 'en');
+  }
+
+  document.getElementById('lang-btn').addEventListener('click', () => {
+    applyLang(currentLang === 'es' ? 'en' : 'es');
   });
 
-  // Update lang indicators
-  document.getElementById('lang-es').classList.toggle('active', lang === 'es');
-  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  applyLang(currentLang);
 
-  // Update html lang attr
-  document.documentElement.lang = lang;
-}
+  /* ─── NAV SCROLL ─── */
+  const navbar = document.getElementById('navbar');
+  const navInstallBtn = document.getElementById('nav-install-btn');
+  const heroSection = document.getElementById('hero');
+  const stickyCta = document.getElementById('sticky-cta');
 
-document.getElementById('lang-toggle').addEventListener('click', () => {
-  setLang(currentLang === 'es' ? 'en' : 'es');
-});
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    const visible = !entry.isIntersecting;
+    stickyCta.classList.toggle('visible', visible);
+    navInstallBtn.classList.toggle('visible', visible);
+  }, { threshold: 0.1 });
+  heroObserver.observe(heroSection);
 
-// Init
-setLang('es');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 80);
+  }, { passive: true });
 
-/* ══════════════════════════════════════════════
-   Hamburger menu
-══════════════════════════════════════════════ */
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.getElementById('nav-links');
-
-hamburger.addEventListener('click', () => {
-  navLinks.classList.toggle('open');
-});
-
-// Close on link click
-navLinks.querySelectorAll('a').forEach(a => {
-  a.addEventListener('click', () => navLinks.classList.remove('open'));
-});
-
-/* ══════════════════════════════════════════════
-   Tabs (Install)
-══════════════════════════════════════════════ */
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + tab).classList.add('active');
+  /* ─── HAMBURGER ─── */
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobile-menu');
+  hamburger.addEventListener('click', () => {
+    mobileMenu.classList.toggle('open');
   });
-});
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  });
 
-/* ══════════════════════════════════════════════
-   Accordion
-══════════════════════════════════════════════ */
-document.getElementById('acc-header').addEventListener('click', () => {
-  document.getElementById('manual-accordion').classList.toggle('open');
-});
+  /* ─── FADE IN OBSERVER ─── */
+  const fadeObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        fadeObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
 
-/* ══════════════════════════════════════════════
-   Copy buttons
-══════════════════════════════════════════════ */
-document.querySelectorAll('.editor-copy-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key = btn.dataset.copy;
-    const text = copyTexts[key] || '';
-    navigator.clipboard.writeText(text).then(() => {
-      const original = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (currentLang === 'es' ? 'Copiado' : 'Copied');
-      btn.classList.add('copied');
+  document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+
+  /* ─── TERMINAL ANIMATION ─── */
+  const termLines = document.querySelectorAll('.term-line');
+  const termCursor = document.getElementById('term-cursor');
+  let termTimer = null;
+
+  function runTerminal() {
+    termLines.forEach(l => l.classList.remove('visible'));
+    if (termCursor) termCursor.style.display = 'none';
+    let delay = 300;
+    termLines.forEach((line, i) => {
       setTimeout(() => {
-        btn.innerHTML = original;
-        btn.classList.remove('copied');
-      }, 2000);
-    }).catch(() => {
-      // Fallback for older browsers
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      const original = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (currentLang === 'es' ? 'Copiado' : 'Copied');
-      btn.classList.add('copied');
+        line.classList.add('visible');
+        if (i === termLines.length - 1 && termCursor) {
+          termCursor.style.display = 'inline-block';
+        }
+      }, delay);
+      delay += line.classList.contains('empty') ? 120 : 280;
+    });
+  }
+
+  // Observe terminal
+  const termObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      runTerminal();
+      termTimer = setInterval(runTerminal, 8000);
+      termObserver.unobserve(entry.target);
+    }
+  }, { threshold: 0.3 });
+  termObserver.observe(document.querySelector('.terminal-wrap'));
+
+  /* ─── FLOW ARROW ANIMATION ─── */
+  const flowObserver = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.flow-arrow-path').forEach((path, i) => {
+        setTimeout(() => path.classList.add('animated'), i * 350 + 200);
+      });
+      flowObserver.unobserve(entry.target);
+    }
+  }, { threshold: 0.3 });
+  const flowDiagram = document.getElementById('flow-diagram');
+  if (flowDiagram) flowObserver.observe(flowDiagram);
+
+  /* ─── DEMO TABS ─── */
+  const tabSingle = document.getElementById('tab-single');
+  const tabSummary = document.getElementById('tab-summary');
+  const panelSingle = document.getElementById('panel-single');
+  const panelSummary = document.getElementById('panel-summary');
+
+  tabSingle.addEventListener('click', () => {
+    tabSingle.classList.add('active');
+    tabSummary.classList.remove('active');
+    panelSingle.style.display = '';
+    panelSummary.style.display = 'none';
+  });
+  tabSummary.addEventListener('click', () => {
+    tabSummary.classList.add('active');
+    tabSingle.classList.remove('active');
+    panelSummary.style.display = '';
+    panelSingle.style.display = 'none';
+  });
+
+  /* ─── SIMULATE SESSION BUTTON ─── */
+  const btnSim = document.getElementById('btn-sim');
+  let simRunning = false;
+
+  btnSim.addEventListener('click', () => {
+    if (simRunning) return;
+    simRunning = true;
+    tabSingle.click();
+
+    const lines = panelSingle.querySelectorAll('.demo-code-line');
+    lines.forEach(l => { l.style.opacity = '0'; l.style.transform = 'translateY(6px)'; l.style.transition = 'none'; });
+
+    let delay = 100;
+    lines.forEach((line, i) => {
       setTimeout(() => {
-        btn.innerHTML = original;
-        btn.classList.remove('copied');
-      }, 2000);
+        line.style.transition = 'opacity .3s ease, transform .3s ease';
+        line.style.opacity = '1';
+        line.style.transform = 'translateY(0)';
+        if (i === lines.length - 1) { simRunning = false; }
+      }, delay);
+      delay += 180;
     });
   });
-});
 
-/* ══════════════════════════════════════════════
-   IntersectionObserver — fade-in on scroll
-══════════════════════════════════════════════ */
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      observer.unobserve(entry.target);
-    }
+  /* ─── INSTALL TABS ─── */
+  const itabUnix = document.getElementById('itab-unix');
+  const itabWin = document.getElementById('itab-win');
+  const ipanelUnix = document.getElementById('ipanel-unix');
+  const ipanelWin = document.getElementById('ipanel-win');
+
+  itabUnix.addEventListener('click', () => {
+    itabUnix.classList.add('active'); itabWin.classList.remove('active');
+    ipanelUnix.classList.add('active'); ipanelWin.classList.remove('active');
   });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
-/* ══════════════════════════════════════════════
-   Navbar active section highlight
-══════════════════════════════════════════════ */
-const sections = document.querySelectorAll('section[id]');
-const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
-
-const sectionObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      navAnchors.forEach(a => {
-        a.style.color = a.getAttribute('href') === '#' + entry.target.id
-          ? 'var(--accent-lt)' : '';
-      });
-    }
+  itabWin.addEventListener('click', () => {
+    itabWin.classList.add('active'); itabUnix.classList.remove('active');
+    ipanelWin.classList.add('active'); ipanelUnix.classList.remove('active');
   });
-}, { threshold: 0.4 });
 
-sections.forEach(s => sectionObserver.observe(s));
+  /* ─── COPY BUTTONS ─── */
+  document.querySelectorAll('.btn-copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.copyId;
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      navigator.clipboard.writeText(el.innerText).then(() => {
+        btn.textContent = '✓ Copiado';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = i18n[currentLang].copy_btn || 'Copiar';
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {});
+    });
+  });
+
+  /* ─── COPY CONFIG ─── */
+  document.getElementById('btn-copy-config').addEventListener('click', function() {
+    const configText = `{
+  "lang": "es",
+  "docs_dir": "docs",
+  "max_summary_lines": 5,
+  "include_tokens": true,
+  "date_format": "YYYY-MM-DD"
+}`;
+    navigator.clipboard.writeText(configText).then(() => {
+      this.textContent = '✓ Copiado';
+      setTimeout(() => {
+        this.textContent = i18n[currentLang].config_copy || 'Copiar config';
+      }, 2000);
+    }).catch(() => {});
+  });
+
+  /* ─── ACCORDIONS ─── */
+  [['acc-header-unix', 'acc-body-unix', 'acc-arrow-unix'],
+   ['acc-header-win',  'acc-body-win',  'acc-arrow-win']].forEach(([hId, bId, aId]) => {
+    const header = document.getElementById(hId);
+    const body   = document.getElementById(bId);
+    const arrow  = document.getElementById(aId);
+    if (!header) return;
+    header.addEventListener('click', () => {
+      const open = body.classList.toggle('open');
+      arrow.classList.toggle('open', open);
+    });
+  });
+
+  /* ─── SMOOTH SCROLL FOR ALL ANCHOR LINKS ─── */
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+        mobileMenu.classList.remove('open');
+      }
+    });
+  });
 </script>
 </body>
 </html>

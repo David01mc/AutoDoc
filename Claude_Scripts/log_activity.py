@@ -279,32 +279,34 @@ def parse_table_row(line):
     return [clean_markdown(c) for c in cells if c.strip()]
 
 
-def is_noise_line(line):
-    if line.startswith("```") or line.startswith("---"):
-        return True
-    if line.startswith("#"):
-        return True
-    if line.startswith("|"):
-        return False
-    code_chars = line.count("`") + line.count("(") + line.count(")")
-    if code_chars > len(line) * 0.3:
-        return True
-    if len(line) < 20:
-        return True
-    return False
+def is_bold_header(line):
+    """Detecta líneas que son títulos en negrita: **Texto** o **1. Texto**"""
+    return bool(re.match(r'^\*\*[^*]{3,}\*\*\s*$', line))
 
 
-def build_summary_text(assistant_texts, last_message, max_lines):
-    text_source = last_message or " ".join(assistant_texts)
-    if not text_source:
-        return []
-
-    lines = text_source.split("\n")
-    summary_lines = []
+def _extract_lines(text, max_lines, pre_code_only=False):
+    """
+    Extrae líneas de resumen de un bloque de texto.
+    Si pre_code_only=True, se detiene en el primer bloque de código.
+    """
+    lines = text.split("\n")
+    result = []
+    inside_code_block = False
 
     for line in lines:
         line = line.strip()
         if not line:
+            continue
+
+        if line.startswith("```"):
+            inside_code_block = not inside_code_block
+            if pre_code_only and inside_code_block:
+                break       # Paramos antes del primer bloque de código
+            continue
+        if inside_code_block:
+            continue
+
+        if line.startswith("---") or line.startswith("===") or line.startswith("#"):
             continue
         if line.startswith("|"):
             if is_table_separator(line):
@@ -313,23 +315,59 @@ def build_summary_text(assistant_texts, last_message, max_lines):
             if len(cells) >= 2 and len(cells[0]) < 50:
                 entry = f"{cells[0]}: {cells[1]}"
                 if len(entry) >= 20:
-                    summary_lines.append(truncate(entry, 180))
+                    result.append(truncate(entry, 180))
             elif len(cells) == 1 and len(cells[0]) >= 20:
-                summary_lines.append(truncate(cells[0], 180))
-            if len(summary_lines) >= 6:
+                result.append(truncate(cells[0], 180))
+            if len(result) >= max_lines:
                 break
             continue
-        if is_noise_line(line):
+
+        # Títulos en negrita puros (**Texto**) — usar como punto
+        if is_bold_header(line):
+            clean = re.sub(r'\*\*([^*]+)\*\*', r'\1', line).strip()
+            if len(clean) >= 10:
+                result.append(truncate(clean, 180))
+                if len(result) >= max_lines:
+                    break
             continue
-        clean = line.lstrip("-*> 0123456789.").strip()
+
+        # Líneas que empiezan con código inline (`foo`) — son explicaciones técnicas, descartar
+        if line.startswith("`"):
+            continue
+
+        # Líneas con alta densidad de código — descartar
+        code_chars = line.count("`") + line.count("(") + line.count(")")
+        if code_chars > len(line) * 0.3:
+            continue
+        if len(line) < 20:
+            continue
+
+        clean = re.sub(r'^[-*>]+\s*', '', line)
+        clean = re.sub(r'^\d+[.)]\s+', '', clean)
         clean = clean_markdown(clean)
         if len(clean) < 20:
             continue
-        summary_lines.append(truncate(clean, 180))
-        if len(summary_lines) >= max_lines:
+        result.append(truncate(clean, 180))
+        if len(result) >= max_lines:
             break
 
-    return summary_lines
+    return result
+
+
+def build_summary_text(assistant_texts, last_message, max_lines):
+    text_source = last_message or " ".join(assistant_texts)
+    if not text_source:
+        return []
+
+    # Prioridad 1: texto ANTES del primer bloque de código
+    # Es donde Claude suele dar el resultado de alto nivel
+    pre_code = _extract_lines(text_source, max_lines, pre_code_only=True)
+    if len(pre_code) >= 2:
+        return pre_code
+
+    # Prioridad 2: si no hay suficiente texto previo al código,
+    # escanear todo el texto (ignorando bloques de código)
+    return _extract_lines(text_source, max_lines, pre_code_only=False)
 
 
 # ── Objective inference ───────────────────────────────────────────────────────
