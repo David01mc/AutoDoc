@@ -2,7 +2,7 @@
   "_comment": "AutoDoc configuration — https://github.com/tu-usuario/autodoc",
   "lang": "es",
   "docs_dir": "docs",
-  "max_summary_lines": 3,
+  "max_summary_lines": 15,
   "max_changes_in_summary": 15,
   "min_message_length": 30,
   "skip_read_only_turns": true
