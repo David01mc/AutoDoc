@@ -529,21 +529,34 @@
     /* ─── FOOTER ─── */
     footer {
       background: var(--bg-card); border-top: 1px solid var(--border);
-      padding: 3rem 1.5rem; text-align: center;
+      padding: 1.5rem 2rem;
     }
+    .footer-row {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .footer-left { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-right { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-final-bar {
+      max-width: 1100px; margin: .75rem auto 0;
+      text-align: center; font-size: .8rem; color: var(--text-muted); font-style: italic;
+      padding-top: .75rem; border-top: 1px solid var(--border);
+    }
+    @media (max-width: 768px) { .footer-row { flex-direction: column; align-items: flex-start; } }
     .footer-logo {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: .95rem; font-weight: 600; color: var(--text);
-      text-decoration: none; margin-bottom: 1.5rem;
+      text-decoration: none;
     }
     .footer-logo .logo-bracket { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
     .footer-links {
       display: flex; align-items: center; justify-content: center;
-      gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; list-style: none;
+      gap: 1.5rem; flex-wrap: wrap; list-style: none;
     }
     .footer-links a { color: var(--text-muted); text-decoration: none; font-size: .85rem; transition: color .2s; }
     .footer-links a:hover { color: var(--accent); }
-    .footer-by { font-size: .82rem; color: var(--text-muted); margin-bottom: .75rem; }
+    .footer-by { font-size: .82rem; color: var(--text-muted); }
     .footer-by a { color: var(--accent); text-decoration: none; }
     .footer-by a:hover { text-decoration: underline; }
     .footer-meta { font-size: .78rem; color: var(--text-muted); margin-bottom: 1.25rem; }
@@ -1056,23 +1069,29 @@
 
 <!-- ─── FOOTER ─── -->
 <footer>
-  <a href="#hero" class="footer-logo">
-    <span class="logo-bracket">&lt;/&gt;</span>
-    AutoDoc
-  </a>
-  <ul class="footer-links">
-    <li><a href="#how" data-i18n="nav_how">Cómo funciona</a></li>
-    <li><a href="#demo" data-i18n="nav_demo">Demo</a></li>
-    <li><a href="#install" data-i18n="nav_install_link">Instalación</a></li>
-    <li><a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener">GitHub</a></li>
-  </ul>
-  <p class="footer-by">
-    <span data-i18n="footer_by">Creado por</span>
-    <a href="https://github.com/David01mc" target="_blank" rel="noopener">David</a>
-    <span data-i18n="footer_by2"> — desarrollador que usa Claude Code a diario.</span>
-  </p>
-  <p class="footer-meta">MIT License · © 2026 AutoDoc</p>
-  <p class="footer-final" data-i18n="footer_final">Lo que te llevas: nunca más perderás el hilo de una sesión de Claude Code.</p>
+  <div class="footer-row">
+    <div class="footer-left">
+      <a href="#hero" class="footer-logo">
+        <span class="logo-bracket">&lt;/&gt;</span>
+        AutoDoc
+      </a>
+      <ul class="footer-links">
+        <li><a href="#how" data-i18n="nav_how">Cómo funciona</a></li>
+        <li><a href="#demo" data-i18n="nav_demo">Demo</a></li>
+        <li><a href="#install" data-i18n="nav_install_link">Instalación</a></li>
+        <li><a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
+    <div class="footer-right">
+      <p class="footer-by">
+        <span data-i18n="footer_by">Creado por</span>
+        <a href="https://github.com/David01mc" target="_blank" rel="noopener">David</a>
+        <span data-i18n="footer_by2"> — desarrollador que usa Claude Code a diario.</span>
+      </p>
+      <p class="footer-meta">MIT License · © 2026 AutoDoc</p>
+    </div>
+  </div>
+  <p class="footer-final-bar" data-i18n="footer_final">Lo que te llevas: nunca más perderás el hilo de una sesión de Claude Code.</p>
 </footer>
 
 <!-- ─── STICKY CTA ─── -->

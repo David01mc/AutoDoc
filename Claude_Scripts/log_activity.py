@@ -263,10 +263,11 @@ def describe_write(filename, content, lang):
 # ── Markdown cleaning ─────────────────────────────────────────────────────────
 
 def clean_markdown(text):
+    # Convertir links [texto](url) → texto
     text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    text = re.sub(r'\*{1,2}([^*]+)\*{1,2}', r'\1', text)
-    text = text.replace("**", "").replace("*", "")
-    text = re.sub(r'`[^`]{40,}`', '[code]', text)
+    # Eliminar inline code muy largo (ruido), conservar el corto
+    text = re.sub(r'`[^`]{40,}`', '', text)
+    # Conservar ** y * — el diario es Markdown, se renderizan como negrita/cursiva
     return text.strip()
 
 
@@ -287,29 +288,54 @@ def is_bold_header(line):
 def _extract_lines(text, max_lines, pre_code_only=False):
     """
     Extrae líneas de resumen de un bloque de texto.
-    Si pre_code_only=True, se detiene en el primer bloque de código.
+    Si pre_code_only=True, se detiene en el primer bloque de código LARGO (>2 líneas).
+    Bloques cortos (1-2 líneas) son ejemplos/resultados y se incluyen.
     """
     lines = text.split("\n")
     result = []
     inside_code_block = False
+    code_block_lines = []
 
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
 
         if line.startswith("```"):
-            inside_code_block = not inside_code_block
-            if pre_code_only and inside_code_block:
-                break       # Paramos antes del primer bloque de código
+            if not inside_code_block:
+                # Inicio de bloque: previsualizar cuántas líneas tiene
+                inside_code_block = True
+                code_block_lines = []
+            else:
+                # Fin de bloque
+                inside_code_block = False
+                if pre_code_only and len(code_block_lines) > 2:
+                    break   # Bloque largo → parar
+                # Bloque corto (1-2 líneas) → incluir su contenido como resultado
+                for cl in code_block_lines:
+                    cl = cl.strip()
+                    if len(cl) >= 10:
+                        result.append(truncate(cl, 180))
+                        if len(result) >= max_lines:
+                            break
+                code_block_lines = []
+            i += 1
             continue
+
         if inside_code_block:
+            code_block_lines.append(line)
+            i += 1
+            continue
+
+        if not line:
+            i += 1
             continue
 
         if line.startswith("---") or line.startswith("===") or line.startswith("#"):
+            i += 1
             continue
         if line.startswith("|"):
             if is_table_separator(line):
+                i += 1
                 continue
             cells = parse_table_row(line)
             if len(cells) >= 2 and len(cells[0]) < 50:
@@ -320,6 +346,7 @@ def _extract_lines(text, max_lines, pre_code_only=False):
                 result.append(truncate(cells[0], 180))
             if len(result) >= max_lines:
                 break
+            i += 1
             continue
 
         # Títulos en negrita puros (**Texto**) — usar como punto
@@ -329,27 +356,33 @@ def _extract_lines(text, max_lines, pre_code_only=False):
                 result.append(truncate(clean, 180))
                 if len(result) >= max_lines:
                     break
+            i += 1
             continue
 
         # Líneas que empiezan con código inline (`foo`) — son explicaciones técnicas, descartar
         if line.startswith("`"):
+            i += 1
             continue
 
         # Líneas con alta densidad de código — descartar
         code_chars = line.count("`") + line.count("(") + line.count(")")
         if code_chars > len(line) * 0.3:
+            i += 1
             continue
         if len(line) < 20:
+            i += 1
             continue
 
         clean = re.sub(r'^[-*>]+\s*', '', line)
         clean = re.sub(r'^\d+[.)]\s+', '', clean)
         clean = clean_markdown(clean)
         if len(clean) < 20:
+            i += 1
             continue
         result.append(truncate(clean, 180))
         if len(result) >= max_lines:
             break
+        i += 1
 
     return result
 
@@ -395,7 +428,21 @@ def infer_objective(user_question, tool_uses, lang):
     else:
         verb = t("verb_attend", lang)
 
-    topic = truncate(user_question, 80)
+    # Limpiar la pregunta para el título: quitar bloques de código,
+    # backticks, URLs y quedarse con la primera frase significativa
+    clean_q = re.sub(r'```.*?```', '', user_question, flags=re.DOTALL)  # bloques código
+    clean_q = re.sub(r'`[^`]+`', '', clean_q)                           # inline code
+    clean_q = re.sub(r'https?://\S+', '', clean_q)                      # URLs
+    clean_q = re.sub(r'\s+', ' ', clean_q).strip()
+
+    # Tomar solo la primera oración o línea significativa
+    for sep in ['\n', '. ', '? ', '! ']:
+        part = clean_q.split(sep)[0].strip()
+        if len(part) >= 8:
+            clean_q = part
+            break
+
+    topic = truncate(clean_q, 60) if clean_q else truncate(user_question, 60)
     return f"{verb}: {topic}" if topic else verb
 
 
@@ -606,10 +653,8 @@ def write_entry(data_out, lang, docs_dir, cfg):
             project = data_out["project"] or "Project"
             f.write(f"# {t('diary_title', lang)} — {project} — {now:%Y-%m-%d}\n\n")
 
-        f.write(f"---\n\n### {now:%H:%M:%S}\n\n")
-
-        if data_out["objective"]:
-            f.write(f"**{t('objective', lang)}:** {data_out['objective']}\n\n")
+        objective_inline = f" — {data_out['objective']}" if data_out["objective"] else ""
+        f.write(f"---\n\n### {now:%H:%M:%S}{objective_inline}\n\n")
 
         if data_out["question"]:
             f.write(f"> **{t('user', lang)}:** {data_out['question']}\n\n")
