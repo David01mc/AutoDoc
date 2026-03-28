@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -406,20 +407,28 @@
 
     /* ─── PARA QUIÉN ─── */
     #audience { background: var(--bg-card); }
-    .audience-list { display: flex; flex-direction: column; gap: .75rem; max-width: 720px; margin: 0 auto; }
+    .audience-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
     .audience-item {
-      display: flex; align-items: flex-start; gap: 1rem;
-      padding: 1.25rem 1.5rem;
-      background: var(--bg); border-left: 3px solid transparent;
-      border-radius: 0 10px 10px 0;
-      transition: border-color .2s, background .2s, transform .2s;
-      border: 1px solid var(--border); border-left: 3px solid transparent;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 1.1rem;
+      padding: 2rem 1.75rem;
+      background: var(--bg); border-radius: 14px;
+      border: 1px solid var(--border); border-top: 3px solid transparent;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
     }
-    .audience-item:hover { border-left-color: var(--accent); background: var(--accent-light); transform: translateX(3px); }
-    .audience-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: .1rem; }
-    .audience-text strong { color: var(--text); font-weight: 600; }
-    .audience-text { color: var(--text-muted); font-size: .9rem; }
-    .audience-text strong { display: block; margin-bottom: .2rem; font-size: .95rem; color: var(--text); }
+    .audience-item:hover {
+      border-top-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      transform: translateY(-3px);
+    }
+    .audience-icon-wrap {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; color: var(--accent); flex-shrink: 0;
+    }
+    .audience-text strong { color: var(--text); font-weight: 600; display: block; margin-bottom: .3rem; font-size: 1rem; }
+    .audience-text { color: var(--text-muted); font-size: .88rem; line-height: 1.55; }
+    @media (max-width: 768px) { .audience-list { grid-template-columns: 1fr; } }
 
     /* ─── CONFIGURACIÓN ─── */
     #config { background: var(--bg); }
@@ -897,21 +906,27 @@
     <h2 class="section-title fade-in" data-i18n="audience_title">¿Para quién es?</h2>
     <div class="audience-list fade-in">
       <div class="audience-item">
-        <span class="audience-icon">🧑‍💻</span>
+        <div class="audience-icon-wrap">
+          <i class="fa-solid fa-user-astronaut"></i>
+        </div>
         <div class="audience-text">
           <strong data-i18n="aud_1_title">Solo dev</strong>
           <span data-i18n="aud_1_desc">Tu memoria entre sesiones. Nunca más "¿dónde lo dejé?"</span>
         </div>
       </div>
       <div class="audience-item">
-        <span class="audience-icon">👥</span>
+        <div class="audience-icon-wrap">
+          <i class="fa-solid fa-people-group"></i>
+        </div>
         <div class="audience-text">
           <strong data-i18n="aud_2_title">Equipo</strong>
           <span data-i18n="aud_2_desc">Traspasos sin fricción. El próximo dev sabe exactamente qué pasó.</span>
         </div>
       </div>
       <div class="audience-item">
-        <span class="audience-icon">🌐</span>
+        <div class="audience-icon-wrap">
+          <i class="fa-brands fa-github"></i>
+        </div>
         <div class="audience-text">
           <strong data-i18n="aud_3_title">Open Source</strong>
           <span data-i18n="aud_3_desc">Contribuciones AI trazables. Historial de decisiones automatizado.</span>
