@@ -427,6 +427,7 @@
     .btn-copy-config:hover { background: rgba(99,102,241,0.25); }
     .config-body {
       background: var(--bg-code); padding: 1.5rem;
+      white-space: pre; overflow-x: auto;
       font-family: 'JetBrains Mono', monospace; font-size: .82rem;
       line-height: 1.9; position: relative;
     }
@@ -919,11 +920,12 @@
         </div>
         <div class="config-body" id="config-body">
 <span class="cfg-punct">{</span>
-  <span class="cfg-key">"lang"</span><span class="cfg-punct">:</span> <span class="cfg-val">"es"</span><span class="cfg-punct">,</span>           <span class="cfg-comment">// "es" o "en"</span>
-  <span class="cfg-key">"docs_dir"</span><span class="cfg-punct">:</span> <span class="cfg-val">"docs"</span><span class="cfg-punct">,</span>        <span class="cfg-comment">// carpeta de salida</span>
-  <span class="cfg-key">"max_summary_lines"</span><span class="cfg-punct">:</span> <span class="cfg-num">5</span><span class="cfg-punct">,</span>   <span class="cfg-comment">// líneas por resumen</span>
-  <span class="cfg-key">"include_tokens"</span><span class="cfg-punct">:</span> <span class="cfg-val">true</span><span class="cfg-punct">,</span>  <span class="cfg-comment">// mostrar uso de tokens</span>
-  <span class="cfg-key">"date_format"</span><span class="cfg-punct">:</span> <span class="cfg-val">"YYYY-MM-DD"</span>  <span class="cfg-comment">// formato de fecha</span>
+  <span class="cfg-key">"lang"</span><span class="cfg-punct">:</span> <span class="cfg-val">"es"</span><span class="cfg-punct">,</span>                    <span class="cfg-comment">// "es" o "en"</span>
+  <span class="cfg-key">"docs_dir"</span><span class="cfg-punct">:</span> <span class="cfg-val">"docs"</span><span class="cfg-punct">,</span>               <span class="cfg-comment">// carpeta de salida</span>
+  <span class="cfg-key">"max_summary_lines"</span><span class="cfg-punct">:</span> <span class="cfg-num">3</span><span class="cfg-punct">,</span>           <span class="cfg-comment">// líneas extraídas por respuesta</span>
+  <span class="cfg-key">"max_changes_in_summary"</span><span class="cfg-punct">:</span> <span class="cfg-num">15</span><span class="cfg-punct">,</span>     <span class="cfg-comment">// cambios máx. en /summary</span>
+  <span class="cfg-key">"min_message_length"</span><span class="cfg-punct">:</span> <span class="cfg-num">30</span><span class="cfg-punct">,</span>         <span class="cfg-comment">// mín. chars para loguear</span>
+  <span class="cfg-key">"skip_read_only_turns"</span><span class="cfg-punct">:</span> <span class="cfg-val">true</span>      <span class="cfg-comment">// omitir turnos solo-lectura</span>
 <span class="cfg-punct">}</span>
         </div>
       </div>
@@ -960,7 +962,7 @@
           <svg class="accordion-arrow" id="acc-arrow-unix" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="accordion-body" id="acc-body-unix">
-          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text);">
+          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text); white-space:pre; overflow-x:auto;">
 <span class="cfg-comment">// ~/.claude/settings.json</span>
 <span class="cfg-punct">{</span>
   <span class="cfg-key">"hooks"</span><span class="cfg-punct">: {</span>
@@ -1002,7 +1004,7 @@
           <svg class="accordion-arrow" id="acc-arrow-win" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="accordion-body" id="acc-body-win">
-          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text);">
+          <div class="code-block-body" style="padding:1.25rem 1.4rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.75; color:var(--text); white-space:pre; overflow-x:auto;">
 <span class="cfg-comment">// %USERPROFILE%\.claude\settings.json</span>
 <span class="cfg-punct">{</span>
   <span class="cfg-key">"hooks"</span><span class="cfg-punct">: {</span>
