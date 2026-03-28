@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python Claude_Scripts/log_activity.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
