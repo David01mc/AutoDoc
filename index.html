@@ -216,7 +216,7 @@
     .term-body {
       background: var(--bg-code); padding: 1.25rem 1.5rem;
       font-family: 'JetBrains Mono', monospace; font-size: .82rem;
-      line-height: 1.8; min-height: 220px;
+      line-height: 1.8; height: 310px;
       overflow: hidden; position: relative;
     }
     .term-line {
@@ -261,23 +261,6 @@
       width: 1px; background: var(--border);
     }
     .stat-icon { color: var(--accent); }
-
-    /* ─── SOCIAL PROOF ─── */
-    #social {
-      padding: 4rem 1.5rem;
-      background: var(--bg-card);
-      text-align: center;
-    }
-    .social-badges { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-    .social-badges img { height: 22px; }
-    .social-quote { color: var(--text-muted); font-size: .9rem; font-style: italic; margin-bottom: 1.25rem; }
-    .avatars { display: flex; align-items: center; justify-content: center; gap: -8px; }
-    .avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 2px solid var(--bg-card);
-      margin-left: -8px; overflow: hidden; flex-shrink: 0;
-    }
-    .avatar:first-child { margin-left: 0; }
 
     /* ─── SECTION BASE ─── */
     section { padding: 6rem 1.5rem; }
@@ -448,10 +431,10 @@
       line-height: 1.9; position: relative;
     }
     .cfg-key { color: #7dd3fc; }
-    .cfg-val { color: var(--green); }
+    .cfg-val { color: #a3e635; }
     .cfg-num { color: var(--orange); }
-    .cfg-comment { color: #3d4a5c; }
-    .cfg-punct { color: var(--text-muted); }
+    .cfg-comment { color: #6b7a8d; font-style: italic; }
+    .cfg-punct { color: #94a3b8; }
     .annotation {
       position: absolute; right: -220px; background: var(--bg-card);
       border: 1px solid var(--border); border-radius: 8px;
@@ -691,54 +674,6 @@
   </div>
 </div>
 
-<!-- ─── SOCIAL PROOF ─── -->
-<section id="social">
-  <div class="container">
-    <div class="social-badges">
-      <img src="https://img.shields.io/github/stars/David01mc/autodoc?style=social" alt="GitHub stars" loading="lazy" />
-      <img src="https://img.shields.io/github/forks/David01mc/autodoc?style=social" alt="GitHub forks" loading="lazy" />
-    </div>
-    <p class="social-quote" data-i18n="social_quote">"Usado por desarrolladores que trabajan con Claude Code a diario"</p>
-    <div class="avatars">
-      <!-- Generic SVG avatars with accent colors -->
-      <div class="avatar">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="36" height="36" fill="#6366f1"/>
-          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
-          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
-        </svg>
-      </div>
-      <div class="avatar">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="36" height="36" fill="#8b5cf6"/>
-          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
-          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
-        </svg>
-      </div>
-      <div class="avatar">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="36" height="36" fill="#10b981"/>
-          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
-          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
-        </svg>
-      </div>
-      <div class="avatar">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="36" height="36" fill="#f59e0b"/>
-          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
-          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
-        </svg>
-      </div>
-      <div class="avatar">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="36" height="36" fill="#3b82f6"/>
-          <circle cx="18" cy="14" r="7" fill="rgba(255,255,255,0.3)"/>
-          <ellipse cx="18" cy="34" rx="12" ry="8" fill="rgba(255,255,255,0.2)"/>
-        </svg>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- ─── PROBLEMA ─── -->
 <section id="problem">
@@ -1015,27 +950,8 @@
         <div class="code-block-body" id="cmd-unix"><span class="cmd-comment"># 1. Clona el repositorio</span>
 <span class="cmd-dollar">$</span> git clone https://github.com/David01mc/autodoc.git ~/.claude/autodoc
 
-<span class="cmd-comment"># 2. Instala dependencias</span>
-<span class="cmd-dollar">$</span> pip install -r ~/.claude/autodoc/requirements.txt
-
-<span class="cmd-comment"># 3. Registra el hook en Claude Code</span>
-<span class="cmd-dollar">$</span> cat >> ~/.claude/settings.json &lt;&lt;'EOF'
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/autodoc/log_activity.py"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF</div>
+<span class="cmd-comment"># 2. Instala en tu proyecto</span>
+<span class="cmd-dollar">$</span> bash ~/.claude/autodoc/install.sh /ruta/a/tu-proyecto</div>
       </div>
 
       <div class="accordion">
@@ -1074,13 +990,10 @@ EOF</div>
           <button class="btn-copy" data-copy-id="cmd-win" data-i18n="copy_btn">Copiar</button>
         </div>
         <div class="code-block-body" id="cmd-win"><span class="cmd-comment"># 1. Clona el repositorio</span>
-<span class="cmd-dollar">$</span> git clone https://github.com/David01mc/autodoc.git $env:USERPROFILE\.claude\autodoc
+<span class="cmd-dollar">$</span> git clone https://github.com/David01mc/autodoc.git %USERPROFILE%\.claude\autodoc
 
-<span class="cmd-comment"># 2. Instala dependencias</span>
-<span class="cmd-dollar">$</span> pip install -r $env:USERPROFILE\.claude\autodoc\requirements.txt
-
-<span class="cmd-comment"># 3. Abre settings.json en tu editor</span>
-<span class="cmd-dollar">$</span> notepad $env:USERPROFILE\.claude\settings.json</div>
+<span class="cmd-comment"># 2. Instala en tu proyecto</span>
+<span class="cmd-dollar">$</span> %USERPROFILE%\.claude\autodoc\install.bat C:\ruta\a\tu-proyecto</div>
       </div>
 
       <div class="accordion">
