@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoDoc para Claude Code — Documentación automática sin tokens extra</title>
+  <meta name="description" content="AutoDoc documenta automáticamente tus sesiones de Claude Code. Sin tokens extra. Sin esfuerzo manual. Python 3.8+." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #1a1a2e;
+      --bg-card:    #0f172a;
+      --bg-mid:     #16213e;
+      --bg-code:    #0d1117;
+      --accent:     #d97706;
+      --accent-lt:  #f59e0b;
+      --text:       #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim:   #64748b;
+      --border:     #1e293b;
+      --green:      #22c55e;
+      --red:        #ef4444;
+      --yellow:     #eab308;
+      --blue:       #3b82f6;
+      --purple:     #a78bfa;
+      --cyan:       #22d3ee;
+      --radius:     12px;
+      --radius-lg:  20px;
+      --shadow:     0 4px 32px rgba(0,0,0,0.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-card); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+    /* ─── NAVBAR ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(26,26,46,0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(217,119,6,0.15);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.05rem; font-weight: 700; color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--accent-lt); }
+    .nav-links {
+      display: flex; align-items: center; gap: 1.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted); text-decoration: none;
+      font-size: 0.9rem; font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--accent-lt); }
+    .nav-right { display: flex; align-items: center; gap: .75rem; }
+    .lang-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--text-muted); padding: 5px 14px;
+      border-radius: 6px; cursor: pointer; font-size: .82rem;
+      font-family: 'Inter', sans-serif; font-weight: 600;
+      transition: all .2s; display: flex; gap: 4px;
+    }
+    .lang-btn .lang-opt { opacity: .45; transition: opacity .2s; }
+    .lang-btn .lang-opt.active { opacity: 1; color: var(--accent-lt); }
+    .lang-btn:hover { border-color: var(--accent); }
+    .nav-github {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text); text-decoration: none;
+      padding: 7px 16px; border-radius: 8px; font-size: .85rem;
+      font-weight: 600; transition: all .2s;
+    }
+    .nav-github:hover { border-color: var(--accent); color: var(--accent-lt); }
+    .hamburger {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 1.3rem; cursor: pointer;
+    }
+
+    /* ─── SECTIONS ─── */
+    section { padding: 6rem 1.5rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      display: inline-block;
+      background: rgba(217,119,6,.12);
+      color: var(--accent-lt);
+      border: 1px solid rgba(217,119,6,.25);
+      padding: 4px 14px; border-radius: 100px;
+      font-size: .75rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    h2 { font-size: clamp(1.8rem,4vw,2.6rem); font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+    p { color: var(--text-muted); }
+
+    /* ─── FADE-IN ANIMATION ─── */
+    .fade-in { opacity: 0; transform: translateY(28px); transition: opacity .6s ease, transform .6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── HERO ─── */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding-top: 100px;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(217,119,6,.12) 0%, transparent 70%),
+                  var(--bg-deep);
+    }
+    .hero-inner { text-align: center; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(15,23,42,.8);
+      border: 1px solid rgba(217,119,6,.3);
+      padding: 8px 20px; border-radius: 100px;
+      font-size: .8rem; font-weight: 600; color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+    .hero-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    .hero-badge .sep { opacity: .3; }
+    .hero-h1 {
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      font-weight: 900; line-height: 1.1;
+      letter-spacing: -.02em;
+      margin-bottom: 1.5rem;
+    }
+    .hero-h1 .accent { color: var(--accent-lt); }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 640px; margin: 0 auto 2.5rem;
+      font-weight: 400;
+    }
+    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+      color: #000; font-weight: 700; font-size: .95rem;
+      padding: 14px 28px; border-radius: 10px;
+      text-decoration: none; border: none; cursor: pointer;
+      transition: all .2s; box-shadow: 0 4px 20px rgba(217,119,6,.35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(217,119,6,.5); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 9px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text); font-weight: 600; font-size: .95rem;
+      padding: 14px 28px; border-radius: 10px;
+      text-decoration: none; cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent-lt); transform: translateY(-2px); }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 3rem;
+      margin-top: 4rem; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-size: 2rem; font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-lbl { font-size: .8rem; color: var(--text-dim); font-weight: 500; }
+
+    /* ─── PROBLEM ─── */
+    #problem { background: var(--bg-mid); }
+    .before-after {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+      margin-top: 3rem;
+    }
+    .ba-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .ba-label {
+      padding: .6rem 1.2rem;
+      font-size: .75rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .ba-label.before { background: rgba(239,68,68,.1); color: #f87171; border-bottom: 1px solid rgba(239,68,68,.2); }
+    .ba-label.after  { background: rgba(34,197,94,.1); color: #4ade80; border-bottom: 1px solid rgba(34,197,94,.2); }
+
+    /* ─── CODE EDITOR ─── */
+    .editor-window {
+      background: var(--bg-code);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid #30363d;
+    }
+    .editor-topbar {
+      background: #161b22;
+      padding: .7rem 1rem;
+      display: flex; align-items: center; gap: .75rem;
+      border-bottom: 1px solid #30363d;
+    }
+    .editor-dots { display: flex; gap: 6px; }
+    .dot-red   { width:12px;height:12px;border-radius:50%;background:#ff5f57; }
+    .dot-yel   { width:12px;height:12px;border-radius:50%;background:#febc2e; }
+    .dot-grn   { width:12px;height:12px;border-radius:50%;background:#28c840; }
+    .editor-tabs { display: flex; gap: .5rem; margin-left: .5rem; flex-wrap: wrap; }
+    .editor-tab {
+      background: var(--bg-code); color: var(--text-muted);
+      padding: 4px 14px; border-radius: 6px 6px 0 0;
+      font-size: .75rem; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      border: 1px solid #30363d; border-bottom: none;
+    }
+    .editor-tab.active { color: var(--text); background: #0d1117; }
+    .editor-copy-btn {
+      margin-left: auto;
+      background: rgba(255,255,255,.05);
+      border: 1px solid #30363d;
+      color: var(--text-muted); padding: 4px 12px;
+      border-radius: 6px; font-size: .75rem; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-weight: 500;
+      transition: all .2s; white-space: nowrap;
+    }
+    .editor-copy-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+    .editor-copy-btn.copied { color: var(--green); border-color: var(--green); }
+    .code-body {
+      padding: 1.25rem 0;
+      overflow-x: auto;
+    }
+    .code-line {
+      display: flex;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: .82rem; line-height: 1.7;
+      padding: 0 1.25rem;
+    }
+    .code-line:hover { background: rgba(255,255,255,.03); }
+    .ln {
+      color: #3d4450; min-width: 2.5rem; text-align: right;
+      margin-right: 1.5rem; user-select: none; flex-shrink: 0;
+    }
+    .code-content { flex: 1; white-space: pre; }
+    /* Syntax colors */
+    .k  { color: #ff7b72; }   /* keyword / heading */
+    .s  { color: #a5d6ff; }   /* string / value */
+    .c  { color: #8b949e; font-style: italic; } /* comment */
+    .f  { color: #d2a8ff; }   /* function/property */
+    .n  { color: #f59e0b; }   /* number / special */
+    .m  { color: #79c0ff; }   /* md heading / key */
+    .g  { color: #56d364; }   /* green / success */
+    .t  { color: var(--text); } /* plain text */
+    .p  { color: #ffa657; }   /* path/filename */
+
+    /* Small inline code editor (before/after) */
+    .ba-code { padding: 1rem; }
+    .ba-code .code-line { padding: 0 .25rem; }
+    .ba-code .ln { min-width: 1.8rem; margin-right: 1rem; }
+
+    /* ─── HOW IT WORKS ─── */
+    #how { background: var(--bg-deep); }
+    .steps {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem;
+      margin-top: 3rem;
+    }
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.75rem;
+      position: relative; text-align: center;
+      transition: border-color .3s, transform .3s;
+    }
+    .step-card:hover { border-color: rgba(217,119,6,.4); transform: translateY(-4px); }
+    .step-num {
+      position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+      color: #000; width: 28px; height: 28px;
+      border-radius: 50%; font-size: .75rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-icon {
+      font-size: 2.8rem; margin-bottom: 1.2rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-lt));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .step-card h3 { font-size: 1.05rem; margin-bottom: .5rem; }
+    .step-card p { font-size: .9rem; }
+    .surprise-box {
+      margin-top: 2.5rem;
+      background: rgba(217,119,6,.08);
+      border: 1.5px solid rgba(217,119,6,.3);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 2rem;
+      display: flex; align-items: center; gap: 1.25rem;
+      text-align: left;
+    }
+    .surprise-icon { font-size: 2rem; flex-shrink: 0; color: var(--accent-lt); }
+    .surprise-box strong { color: var(--accent-lt); font-size: 1rem; display: block; margin-bottom: .25rem; }
+    .surprise-box p { font-size: .9rem; margin: 0; }
+
+    /* ─── DEMO ─── */
+    #demo { background: var(--bg-mid); }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 3rem; }
+
+    /* ─── CONFIG ─── */
+    #config { background: var(--bg-deep); }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 3rem; }
+    .config-annotations { display: flex; flex-direction: column; gap: 1rem; }
+    .annotation {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: .75rem 1rem;
+    }
+    .annotation code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-lt); font-size: .8rem;
+      background: rgba(217,119,6,.1);
+      padding: 1px 6px; border-radius: 4px;
+    }
+    .annotation p { font-size: .85rem; margin-top: .25rem; color: var(--text-muted); }
+
+    /* ─── FOR WHOM ─── */
+    #for-whom { background: var(--bg-mid); }
+    .cards-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; margin-top: 3rem; }
+    .whom-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.5rem;
+      transition: border-color .3s, transform .3s;
+    }
+    .whom-card:hover { border-color: rgba(217,119,6,.4); transform: translateY(-4px); }
+    .whom-icon {
+      width: 52px; height: 52px;
+      background: rgba(217,119,6,.1);
+      border: 1px solid rgba(217,119,6,.2);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: var(--accent-lt);
+      margin-bottom: 1.2rem;
+    }
+    .whom-card h3 { margin-bottom: .5rem; }
+    .whom-card ul { list-style: none; margin-top: .75rem; }
+    .whom-card ul li {
+      font-size: .88rem; color: var(--text-muted);
+      padding: .3rem 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      display: flex; align-items: flex-start; gap: .5rem;
+    }
+    .whom-card ul li::before { content: "→"; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+    /* ─── INSTALL ─── */
+    #install { background: var(--bg-deep); }
+    .install-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 8px 20px;
+      border-radius: 8px; cursor: pointer; font-size: .88rem;
+      font-family: 'Inter', sans-serif; font-weight: 500;
+      transition: all .2s;
+    }
+    .tab-btn.active { background: rgba(217,119,6,.15); border-color: var(--accent); color: var(--accent-lt); }
+    .tab-btn:hover:not(.active) { border-color: var(--text-dim); color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Accordion */
+    .accordion {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-top: 1.5rem; overflow: hidden;
+    }
+    .accordion-header {
+      padding: 1.1rem 1.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+      transition: background .2s;
+    }
+    .accordion-header:hover { background: rgba(255,255,255,.03); }
+    .accordion-header h3 { font-size: .95rem; margin: 0; }
+    .accordion-arrow { color: var(--text-muted); transition: transform .3s; font-size: .85rem; }
+    .accordion.open .accordion-arrow { transform: rotate(180deg); }
+    .accordion-body { display: none; padding: 0 1.5rem 1.5rem; }
+    .accordion.open .accordion-body { display: block; }
+    .accordion-body ol { padding-left: 1.5rem; }
+    .accordion-body ol li { font-size: .9rem; color: var(--text-muted); margin-bottom: .5rem; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+    .footer-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      font-weight: 700; margin-bottom: .5rem;
+    }
+    .footer-tagline .accent { color: var(--accent-lt); }
+    .footer-sub { font-size: .9rem; color: var(--text-muted); margin-bottom: 2rem; }
+    .footer-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .footer-links a {
+      color: var(--text-muted); text-decoration: none;
+      font-size: .85rem; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+      transition: color .2s;
+    }
+    .footer-links a:hover { color: var(--accent-lt); }
+    .footer-meta { font-size: .78rem; color: var(--text-dim); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex; flex-direction: column;
+        position: fixed; top: 64px; left: 0; right: 0;
+        background: rgba(26,26,46,.97);
+        backdrop-filter: blur(16px);
+        padding: 1.5rem; gap: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .hamburger { display: block; }
+      .before-after { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .demo-grid { grid-template-columns: 1fr; }
+      .config-grid { grid-template-columns: 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .surprise-box { flex-direction: column; text-align: center; }
+      .hero-stats { gap: 2rem; }
+      section { padding: 4rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAVBAR ─── -->
+<nav id="navbar">
+  <a href="#hero" class="nav-logo">
+    <i class="fa-solid fa-book-open-reader"></i>
+    Auto<span>Doc</span>
+  </a>
+  <ul class="nav-links" id="nav-links">
+    <li><a href="#problem"  data-i18n="nav_problem">El problema</a></li>
+    <li><a href="#how"      data-i18n="nav_how">Cómo funciona</a></li>
+    <li><a href="#demo"     data-i18n="nav_demo">Demo</a></li>
+    <li><a href="#install"  data-i18n="nav_install">Instalar</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="lang-btn" id="lang-toggle" aria-label="Cambiar idioma">
+      <span class="lang-opt" id="lang-es">ES</span>
+      <span style="opacity:.3">|</span>
+      <span class="lang-opt" id="lang-en">EN</span>
+    </button>
+    <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener" class="nav-github">
+      <i class="fa-brands fa-github"></i>
+      GitHub
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Menú">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section id="hero">
+  <div class="container hero-inner fade-in">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      <span data-i18n="badge_tokens">0 tokens extra</span>
+      <span class="sep">·</span>
+      <span>Python 3.8+</span>
+      <span class="sep">·</span>
+      <span>Claude Code</span>
+      <span class="sep">·</span>
+      <span>MIT</span>
+    </div>
+    <h1 class="hero-h1">
+      <span data-i18n="hero_h1_1">Tu código ya está</span><br/>
+      <span class="accent" data-i18n="hero_h1_accent">documentado.</span><br/>
+      <span data-i18n="hero_h1_2">Solo que aún no lo sabías.</span>
+    </h1>
+    <p class="hero-sub" data-i18n="hero_sub">
+      AutoDoc se engancha al evento <strong>Stop</strong> de Claude Code y escribe el diario de tu sesión automáticamente. Sin tokens extra. Sin esfuerzo manual. Listo para el próximo desarrollador.
+    </p>
+    <div class="hero-ctas">
+      <a href="#install" class="btn-primary">
+        <i class="fa-solid fa-bolt"></i>
+        <span data-i18n="cta_install">Instalar en 60 segundos</span>
+      </a>
+      <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener" class="btn-secondary">
+        <i class="fa-brands fa-github"></i>
+        <span data-i18n="cta_github">Ver en GitHub</span>
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">0</div>
+        <div class="stat-lbl" data-i18n="stat_tokens">tokens extra</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">60s</div>
+        <div class="stat-lbl" data-i18n="stat_install">instalación</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">2</div>
+        <div class="stat-lbl" data-i18n="stat_langs">idiomas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">100%</div>
+        <div class="stat-lbl" data-i18n="stat_free">gratis &amp; open source</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PROBLEM ─── -->
+<section id="problem">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-label" data-i18n="section_problem_label">El problema</span>
+      <h2 data-i18n="section_problem_h2">¿Cuántas veces empezaste el día<br/>sin saber dónde lo dejaste?</h2>
+      <p data-i18n="section_problem_p">Sin AutoDoc, reconstruir el contexto de ayer te cuesta tiempo, tokens y frustración. Con AutoDoc, el diario ya está escrito.</p>
+    </div>
+    <div class="before-after fade-in">
+      <!-- BEFORE -->
+      <div class="ba-card">
+        <div class="ba-label before"><i class="fa-solid fa-circle-xmark"></i>&nbsp; <span data-i18n="before_label">Sin AutoDoc</span></div>
+        <div class="editor-window ba-code">
+          <div class="code-body">
+            <div class="code-line"><span class="ln">1</span><span class="code-content c"># notas.txt — día anterior</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">3</span><span class="code-content t">arreglé algo en auth</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="code-content t">creo que fue en app.ts?</span></div>
+            <div class="code-line"><span class="ln">5</span><span class="code-content c"># TODO: revisar tokens JWT</span></div>
+            <div class="code-line"><span class="ln">6</span><span class="code-content t">el CORS seguía fallando al final</span></div>
+            <div class="code-line"><span class="ln">7</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">8</span><span class="code-content k">??? ← siguiente paso desconocido</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- AFTER -->
+      <div class="ba-card">
+        <div class="ba-label after"><i class="fa-solid fa-circle-check"></i>&nbsp; <span data-i18n="after_label">Con AutoDoc</span></div>
+        <div class="editor-window ba-code">
+          <div class="code-body">
+            <div class="code-line"><span class="ln">1</span><span class="code-content m">### 17:48:22</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Objetivo:**</span> <span class="t">Auth JWT → middleware Express</span></span></div>
+            <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="k">**Resultado:**</span> <span class="g">✓ token validado en cada ruta</span></span></div>
+            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">**Archivos:**</span> <span class="p">auth.middleware.ts, app.ts</span></span></div>
+            <div class="code-line"><span class="ln">6</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">7</span><span class="code-content n">`3xEdit, 1xWrite | 2.1k tokens`</span></div>
+            <div class="code-line"><span class="ln">8</span><span class="code-content g"># ← continuar desde aquí</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section id="how">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-label" data-i18n="section_how_label">Cómo funciona</span>
+      <h2 data-i18n="section_how_h2">Tres pasos. Cero interrupciones.</h2>
+      <p data-i18n="section_how_p">AutoDoc se instala una vez y trabaja en silencio. Tú trabajas con Claude Code exactamente igual que siempre.</p>
+    </div>
+    <div class="steps fade-in">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-icon"><i class="fa-solid fa-download"></i></div>
+        <h3 data-i18n="step1_h">Instalas AutoDoc</h3>
+        <p data-i18n="step1_p">Ejecuta <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">install.sh</code> o <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">install.bat</code> apuntando a tu proyecto. En 60 segundos está listo.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-icon"><i class="fa-solid fa-comments"></i></div>
+        <h3 data-i18n="step2_h">Trabajas como siempre</h3>
+        <p data-i18n="step2_p">Abre Claude Code y trabaja exactamente igual. AutoDoc opera en el fondo, invisible. No cambia nada de tu flujo.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-icon"><i class="fa-solid fa-file-lines"></i></div>
+        <h3 data-i18n="step3_h">El diario se escribe solo</h3>
+        <p data-i18n="step3_p">Tras cada respuesta de Claude, una entrada estructurada se añade a <code style="color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace">docs/YYYY-MM-DD.md</code>. Automáticamente.</p>
+      </div>
+    </div>
+    <div class="surprise-box fade-in">
+      <div class="surprise-icon"><i class="fa-solid fa-circle-bolt fa-bounce"></i></div>
+      <div>
+        <strong data-i18n="surprise_strong">Sin llamadas a la API. Sin tokens. Completamente gratis.</strong>
+        <p data-i18n="surprise_p">AutoDoc lee la transcripción local del hook <code style="color:var(--accent-lt);font-family:monospace">Stop</code> de Claude Code. No hace ninguna petición a Anthropic. Cada entrada del diario cuesta exactamente 0 tokens adicionales.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── DEMO ─── -->
+<section id="demo">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-label" data-i18n="section_demo_label">Demo en vivo</span>
+      <h2 data-i18n="section_demo_h2">Así se ve el diario generado</h2>
+      <p data-i18n="section_demo_p">Una entrada real después de una sesión de trabajo. Y el resumen del día con <code style="color:var(--accent-lt);font-family:monospace">/summary</code>.</p>
+    </div>
+    <div class="demo-grid fade-in">
+      <!-- Diary entry -->
+      <div class="editor-window">
+        <div class="editor-topbar">
+          <div class="editor-dots">
+            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+          </div>
+          <div class="editor-tabs">
+            <div class="editor-tab active">docs/2026-03-28.md</div>
+          </div>
+          <button class="editor-copy-btn" data-copy="diary" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+        </div>
+        <div class="code-body" id="diary-code">
+          <div class="code-line"><span class="ln">1</span><span class="code-content m">### 14:32:10</span></div>
+          <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Objetivo:**</span> <span class="t">Implementar: middleware auth JWT</span></span></div>
+          <div class="code-line"><span class="ln">4</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="f">&gt; </span><span class="k">**Usuario:**</span> <span class="t">Añade auth JWT a la API,</span></span></div>
+          <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">verifica el token en cada ruta protegida</span></span></div>
+          <div class="code-line"><span class="ln">7</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">8</span><span class="code-content"><span class="k">**Resultado:**</span></span></div>
+          <div class="code-line"><span class="ln">9</span><span class="code-content"><span class="t">  - Middleware valida Bearer token</span></span></div>
+          <div class="code-line"><span class="ln">10</span><span class="code-content"><span class="t">  - Devuelve 401 si token inválido</span></span></div>
+          <div class="code-line"><span class="ln">11</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">12</span><span class="code-content"><span class="k">**Archivos:**</span></span></div>
+          <div class="code-line"><span class="ln">13</span><span class="code-content"><span class="t">  - Creados: </span><span class="p">`auth.middleware.ts`</span></span></div>
+          <div class="code-line"><span class="ln">14</span><span class="code-content"><span class="t">  - Modificados: </span><span class="p">`app.ts`, `routes/api.ts`</span></span></div>
+          <div class="code-line"><span class="ln">15</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">16</span><span class="code-content"><span class="k">**Cambios en código:**</span></span></div>
+          <div class="code-line"><span class="ln">17</span><span class="code-content"><span class="t">  - </span><span class="p">`auth.middleware.ts`</span><span class="t"> creado</span></span></div>
+          <div class="code-line"><span class="ln">18</span><span class="code-content"><span class="t">    (45 líneas): </span><span class="f">verifyToken</span><span class="t">, </span><span class="f">authMiddleware</span></span></div>
+          <div class="code-line"><span class="ln">19</span><span class="code-content"><span class="t">  - </span><span class="p">`app.ts`</span><span class="t">: añadido </span><span class="f">applyMiddleware</span></span></div>
+          <div class="code-line"><span class="ln">20</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">21</span><span class="code-content"><span class="n">`3xEdit, 1xWrite, 1xRead`</span></span></div>
+          <div class="code-line"><span class="ln">22</span><span class="code-content"><span class="n">`Tokens: 2.1k (in:1.4k, out:0.7k)`</span></span></div>
+          <div class="code-line"><span class="ln">23</span><span class="code-content"><span class="n">`Sesión total: 18.3k`</span></span></div>
+        </div>
+      </div>
+      <!-- Summary -->
+      <div class="editor-window">
+        <div class="editor-topbar">
+          <div class="editor-dots">
+            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+          </div>
+          <div class="editor-tabs">
+            <div class="editor-tab active">/summary</div>
+          </div>
+          <button class="editor-copy-btn" data-copy="summary" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+        </div>
+        <div class="code-body" id="summary-code">
+          <div class="code-line"><span class="ln">1</span><span class="code-content m">## RESUMEN DEL DÍA — 2026-03-28</span></div>
+          <div class="code-line"><span class="ln">2</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="k">**Proyecto:**</span> <span class="t">mi-api</span></span></div>
+          <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="k">**Sesión:**</span> <span class="g">09:15:04 → 17:48:22</span></span></div>
+          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">**Turnos completados:**</span> <span class="n">12</span></span></div>
+          <div class="code-line"><span class="ln">6</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">7</span><span class="code-content m">### Objetivos trabajados</span></div>
+          <div class="code-line"><span class="ln">8</span><span class="code-content"><span class="n">1.</span> <span class="t">Scaffolding inicial del proyecto</span></span></div>
+          <div class="code-line"><span class="ln">9</span><span class="code-content"><span class="n">2.</span> <span class="t">Corregir error CORS del frontend</span></span></div>
+          <div class="code-line"><span class="ln">10</span><span class="code-content"><span class="n">3.</span> <span class="t">Middleware de autenticación JWT</span></span></div>
+          <div class="code-line"><span class="ln">11</span><span class="code-content"><span class="c">   ...</span></span></div>
+          <div class="code-line"><span class="ln">12</span><span class="code-content">&nbsp;</span></div>
+          <div class="code-line"><span class="ln">13</span><span class="code-content m">### Para el siguiente turno</span></div>
+          <div class="code-line"><span class="ln">14</span><span class="code-content"><span class="t">- Revisar: </span><span class="p">`auth.middleware.ts`</span><span class="t">, </span><span class="p">`app.ts`</span></span></div>
+          <div class="code-line"><span class="ln">15</span><span class="code-content"><span class="t">- Último objetivo: </span><span class="k">Auth JWT</span></span></div>
+          <div class="code-line"><span class="ln">16</span><span class="code-content"><span class="t">- Continuar desde: </span><span class="g">17:48:22</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CONFIG ─── -->
+<section id="config">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-label" data-i18n="section_config_label">Configuración</span>
+      <h2 data-i18n="section_config_h2">Un JSON. Todo el control.</h2>
+      <p data-i18n="section_config_p">Edita <code style="color:var(--accent-lt);font-family:monospace">Claude_Scripts/autodoc.config.json</code> para adaptar AutoDoc a tu proyecto.</p>
+    </div>
+    <div class="config-grid fade-in">
+      <div class="editor-window">
+        <div class="editor-topbar">
+          <div class="editor-dots">
+            <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+          </div>
+          <div class="editor-tabs">
+            <div class="editor-tab active">autodoc.config.json</div>
+          </div>
+          <button class="editor-copy-btn" data-copy="config" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+        </div>
+        <div class="code-body" id="config-code">
+          <div class="code-line"><span class="ln">1</span><span class="code-content t">{</span></div>
+          <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="t">  </span><span class="f">"lang"</span><span class="t">: </span><span class="s">"es"</span><span class="t">,</span></span></div>
+          <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="t">  </span><span class="f">"docs_dir"</span><span class="t">: </span><span class="s">"docs"</span><span class="t">,</span></span></div>
+          <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="t">  </span><span class="f">"max_summary_lines"</span><span class="t">: </span><span class="n">3</span><span class="t">,</span></span></div>
+          <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="t">  </span><span class="f">"max_changes_in_summary"</span><span class="t">: </span><span class="n">15</span><span class="t">,</span></span></div>
+          <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">  </span><span class="f">"min_message_length"</span><span class="t">: </span><span class="n">30</span><span class="t">,</span></span></div>
+          <div class="code-line"><span class="ln">7</span><span class="code-content"><span class="t">  </span><span class="f">"skip_read_only_turns"</span><span class="t">: </span><span class="k">true</span></span></div>
+          <div class="code-line"><span class="ln">8</span><span class="code-content t">}</span></div>
+        </div>
+      </div>
+      <div class="config-annotations">
+        <div class="annotation">
+          <code>"lang"</code>
+          <p data-i18n="cfg_lang"><strong>"es"</strong> o <strong>"en"</strong> — idioma del diario generado. Títulos, verbos y mensajes se adaptan automáticamente.</p>
+        </div>
+        <div class="annotation">
+          <code>"docs_dir"</code>
+          <p data-i18n="cfg_docs_dir">Carpeta donde se escriben los diarios. Puede ser cualquier ruta relativa a la raíz del proyecto.</p>
+        </div>
+        <div class="annotation">
+          <code>"max_summary_lines"</code>
+          <p data-i18n="cfg_max_lines">Líneas extraídas de la respuesta de Claude para el campo Resultado. Ajusta según tus preferencias de verbosidad.</p>
+        </div>
+        <div class="annotation">
+          <code>"min_message_length"</code>
+          <p data-i18n="cfg_min_len">Mínimo de caracteres en el mensaje del usuario para activar el log. Evita registrar turnos triviales.</p>
+        </div>
+        <div class="annotation">
+          <code>"skip_read_only_turns"</code>
+          <p data-i18n="cfg_skip_ro"><strong>true</strong> omite turnos donde Claude solo leyó archivos sin modificar nada. Mantiene el diario limpio.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOR WHOM ─── -->
+<section id="for-whom">
+  <div class="container">
+    <div class="fade-in" style="text-align:center">
+      <span class="section-label" data-i18n="section_whom_label">Para quién es</span>
+      <h2 data-i18n="section_whom_h2">Hecho para quienes construyen.</h2>
+      <p data-i18n="section_whom_p">Si usas Claude Code, AutoDoc es para ti. Sin importar el tamaño de tu equipo.</p>
+    </div>
+    <div class="cards-grid fade-in">
+      <div class="whom-card">
+        <div class="whom-icon"><i class="fa-solid fa-user-astronaut"></i></div>
+        <h3 data-i18n="whom1_h">Desarrolladores en solitario</h3>
+        <p data-i18n="whom1_p" style="font-size:.88rem;margin-bottom:.75rem">Tu memoria externa. Nunca más pierdas el hilo entre sesiones.</p>
+        <ul>
+          <li data-i18n="whom1_li1">Retoma exactamente donde lo dejaste</li>
+          <li data-i18n="whom1_li2">Historial de cambios por archivo</li>
+          <li data-i18n="whom1_li3">Métricas de tokens por sesión</li>
+        </ul>
+      </div>
+      <div class="whom-card">
+        <div class="whom-icon"><i class="fa-solid fa-users"></i></div>
+        <h3 data-i18n="whom2_h">Equipos de desarrollo</h3>
+        <p data-i18n="whom2_p" style="font-size:.88rem;margin-bottom:.75rem">Traspasos de turno sin fricción. El siguiente sabe exactamente qué hiciste.</p>
+        <ul>
+          <li data-i18n="whom2_li1">Diario compartido en el repositorio</li>
+          <li data-i18n="whom2_li2">Resumen del día en un comando</li>
+          <li data-i18n="whom2_li3">Trazabilidad de decisiones de Claude</li>
+        </ul>
+      </div>
+      <div class="whom-card">
+        <div class="whom-icon"><i class="fa-brands fa-github"></i></div>
+        <h3 data-i18n="whom3_h">Contribuidores Open Source</h3>
+        <p data-i18n="whom3_p" style="font-size:.88rem;margin-bottom:.75rem">Documenta tus contribuciones AI-assisted de forma transparente y trazable.</p>
+        <ul>
+          <li data-i18n="whom3_li1">Auditoría de cambios asistidos por IA</li>
+          <li data-i18n="whom3_li2">Soporte ES &amp; EN integrado</li>
+          <li data-i18n="whom3_li3">Extensible a nuevos lenguajes</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── INSTALL ─── -->
+<section id="install">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-label" data-i18n="section_install_label">Instalación</span>
+      <h2 data-i18n="section_install_h2">En marcha en 60 segundos.</h2>
+      <p data-i18n="section_install_p">Un solo comando instala AutoDoc en cualquier proyecto existente.</p>
+    </div>
+    <div class="fade-in" style="margin-top:2.5rem">
+      <div class="install-tabs">
+        <button class="tab-btn active" data-tab="mac" data-i18n="tab_mac">macOS / Linux</button>
+        <button class="tab-btn" data-tab="win" data-i18n="tab_win">Windows</button>
+      </div>
+      <!-- macOS/Linux -->
+      <div class="tab-panel active" id="tab-mac">
+        <div class="editor-window">
+          <div class="editor-topbar">
+            <div class="editor-dots">
+              <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+            </div>
+            <div class="editor-tabs">
+              <div class="editor-tab active">bash</div>
+            </div>
+            <button class="editor-copy-btn" data-copy="install-mac" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+          </div>
+          <div class="code-body" id="install-mac-code">
+            <div class="code-line"><span class="ln">1</span><span class="code-content c"># Descarga AutoDoc</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="k">git clone</span> <span class="s">https://github.com/David01mc/autodoc.git</span></span></div>
+            <div class="code-line"><span class="ln">3</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="code-content c"># Instala en tu proyecto (reemplaza la ruta)</span></div>
+            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="k">bash</span> <span class="p">autodoc/install.sh</span> <span class="s">/ruta/a/tu-proyecto</span></span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Windows -->
+      <div class="tab-panel" id="tab-win">
+        <div class="editor-window">
+          <div class="editor-topbar">
+            <div class="editor-dots">
+              <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+            </div>
+            <div class="editor-tabs">
+              <div class="editor-tab active">cmd / PowerShell</div>
+            </div>
+            <button class="editor-copy-btn" data-copy="install-win" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+          </div>
+          <div class="code-body" id="install-win-code">
+            <div class="code-line"><span class="ln">1</span><span class="code-content c">:: Descarga AutoDoc</span></div>
+            <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="k">git clone</span> <span class="s">https://github.com/David01mc/autodoc.git</span></span></div>
+            <div class="code-line"><span class="ln">3</span><span class="code-content">&nbsp;</span></div>
+            <div class="code-line"><span class="ln">4</span><span class="code-content c">:: Instala en tu proyecto (reemplaza la ruta)</span></div>
+            <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="p">autodoc\install.bat</span> <span class="s">C:\ruta\a\tu-proyecto</span></span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Manual accordion -->
+      <div class="accordion" id="manual-accordion">
+        <div class="accordion-header" id="acc-header">
+          <h3 data-i18n="acc_title"><i class="fa-solid fa-wrench" style="color:var(--accent);margin-right:.5rem"></i>Instalación manual (paso a paso)</h3>
+          <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+        </div>
+        <div class="accordion-body">
+          <ol>
+            <li data-i18n="acc_step1">Copia <code style="color:var(--accent-lt);font-family:monospace">Claude_Scripts/</code> y <code style="color:var(--accent-lt);font-family:monospace">.claude/commands/</code> en la raíz de tu proyecto.</li>
+            <li data-i18n="acc_step2">Crea o edita <code style="color:var(--accent-lt);font-family:monospace">.claude/settings.local.json</code> con el siguiente hook:</li>
+          </ol>
+          <div class="editor-window" style="margin-top:1rem">
+            <div class="editor-topbar">
+              <div class="editor-dots">
+                <div class="dot-red"></div><div class="dot-yel"></div><div class="dot-grn"></div>
+              </div>
+              <div class="editor-tabs">
+                <div class="editor-tab active">.claude/settings.local.json</div>
+              </div>
+              <button class="editor-copy-btn" data-copy="manual-hook" data-i18n-copy="copy_btn"><i class="fa-regular fa-copy"></i> Copiar</button>
+            </div>
+            <div class="code-body" id="manual-hook-code">
+              <div class="code-line"><span class="ln">1</span><span class="code-content t">{</span></div>
+              <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="t">  </span><span class="f">"hooks"</span><span class="t">: {</span></span></div>
+              <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="t">    </span><span class="f">"Stop"</span><span class="t">: [</span></span></div>
+              <div class="code-line"><span class="ln">4</span><span class="code-content"><span class="t">      { </span><span class="f">"hooks"</span><span class="t">: [{</span></span></div>
+              <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="t">        </span><span class="f">"type"</span><span class="t">: </span><span class="s">"command"</span><span class="t">,</span></span></div>
+              <div class="code-line"><span class="ln">6</span><span class="code-content"><span class="t">        </span><span class="f">"command"</span><span class="t">: </span><span class="s">"python Claude_Scripts/log_activity.py"</span><span class="t">,</span></span></div>
+              <div class="code-line"><span class="ln">7</span><span class="code-content"><span class="t">        </span><span class="f">"timeout"</span><span class="t">: </span><span class="n">15</span></span></div>
+              <div class="code-line"><span class="ln">8</span><span class="code-content t">      }]}]</span></div>
+              <div class="code-line"><span class="ln">9</span><span class="code-content t">  }}</span></div>
+            </div>
+          </div>
+          <p style="margin-top:.75rem;font-size:.88rem" data-i18n="acc_done">Listo. Abre el proyecto en Claude Code y empieza a trabajar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <p class="footer-tagline" data-i18n="footer_tagline">
+      Lo que te llevás hoy: <span class="accent">nunca más perderás el hilo de una sesión.</span>
+    </p>
+    <p class="footer-sub" data-i18n="footer_sub">AutoDoc transforma el trabajo olvidado en conocimiento persistente.</p>
+    <div class="footer-links">
+      <a href="https://github.com/David01mc/autodoc" target="_blank" rel="noopener">
+        <i class="fa-brands fa-github"></i> GitHub
+      </a>
+      <a href="https://github.com/David01mc/autodoc/issues" target="_blank" rel="noopener">
+        <i class="fa-solid fa-bug"></i> <span data-i18n="footer_issues">Issues</span>
+      </a>
+      <a href="https://github.com/David01mc/autodoc/pulls" target="_blank" rel="noopener">
+        <i class="fa-solid fa-code-pull-request"></i> <span data-i18n="footer_prs">Pull Requests</span>
+      </a>
+      <a href="https://github.com/David01mc/autodoc/blob/main/README.md" target="_blank" rel="noopener">
+        <i class="fa-solid fa-book"></i> <span data-i18n="footer_docs">Documentación</span>
+      </a>
+    </div>
+    <p class="footer-meta">
+      MIT License &nbsp;·&nbsp; <span data-i18n="footer_built">Hecho con</span> <i class="fa-solid fa-heart" style="color:#ef4444"></i> <span data-i18n="footer_for">para la comunidad de Claude Code</span>
+    </p>
+  </div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════
+   i18n — strings
+══════════════════════════════════════════════ */
+const i18n = {
+  es: {
+    nav_problem: "El problema",
+    nav_how: "Cómo funciona",
+    nav_demo: "Demo",
+    nav_install: "Instalar",
+    badge_tokens: "0 tokens extra",
+    hero_h1_1: "Tu código ya está",
+    hero_h1_accent: "documentado.",
+    hero_h1_2: "Solo que aún no lo sabías.",
+    hero_sub: "AutoDoc se engancha al evento <strong>Stop</strong> de Claude Code y escribe el diario de tu sesión automáticamente. Sin tokens extra. Sin esfuerzo manual. Listo para el próximo desarrollador.",
+    cta_install: "Instalar en 60 segundos",
+    cta_github: "Ver en GitHub",
+    stat_tokens: "tokens extra",
+    stat_install: "instalación",
+    stat_langs: "idiomas",
+    stat_free: "gratis & open source",
+    section_problem_label: "El problema",
+    section_problem_h2: "¿Cuántas veces empezaste el día<br/>sin saber dónde lo dejaste?",
+    section_problem_p: "Sin AutoDoc, reconstruir el contexto de ayer te cuesta tiempo, tokens y frustración. Con AutoDoc, el diario ya está escrito.",
+    before_label: "Sin AutoDoc",
+    after_label: "Con AutoDoc",
+    section_how_label: "Cómo funciona",
+    section_how_h2: "Tres pasos. Cero interrupciones.",
+    section_how_p: "AutoDoc se instala una vez y trabaja en silencio. Tú trabajas con Claude Code exactamente igual que siempre.",
+    step1_h: "Instalas AutoDoc",
+    step1_p: "Ejecuta <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.sh</code> o <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.bat</code> apuntando a tu proyecto. En 60 segundos está listo.",
+    step2_h: "Trabajas como siempre",
+    step2_p: "Abre Claude Code y trabaja exactamente igual. AutoDoc opera en el fondo, invisible. No cambia nada de tu flujo.",
+    step3_h: "El diario se escribe solo",
+    step3_p: "Tras cada respuesta de Claude, una entrada estructurada se añade a <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>docs/YYYY-MM-DD.md</code>. Automáticamente.",
+    surprise_strong: "Sin llamadas a la API. Sin tokens. Completamente gratis.",
+    surprise_p: "AutoDoc lee la transcripción local del hook <code style='color:var(--accent-lt);font-family:monospace'>Stop</code> de Claude Code. No hace ninguna petición a Anthropic. Cada entrada del diario cuesta exactamente 0 tokens adicionales.",
+    section_demo_label: "Demo en vivo",
+    section_demo_h2: "Así se ve el diario generado",
+    section_demo_p: "Una entrada real después de una sesión de trabajo. Y el resumen del día con <code style='color:var(--accent-lt);font-family:monospace'>/summary</code>.",
+    copy_btn: "Copiar",
+    section_config_label: "Configuración",
+    section_config_h2: "Un JSON. Todo el control.",
+    section_config_p: "Edita <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/autodoc.config.json</code> para adaptar AutoDoc a tu proyecto.",
+    cfg_lang: "<strong>\"es\"</strong> o <strong>\"en\"</strong> — idioma del diario generado. Títulos, verbos y mensajes se adaptan automáticamente.",
+    cfg_docs_dir: "Carpeta donde se escriben los diarios. Puede ser cualquier ruta relativa a la raíz del proyecto.",
+    cfg_max_lines: "Líneas extraídas de la respuesta de Claude para el campo Resultado. Ajusta según tus preferencias de verbosidad.",
+    cfg_min_len: "Mínimo de caracteres en el mensaje del usuario para activar el log. Evita registrar turnos triviales.",
+    cfg_skip_ro: "<strong>true</strong> omite turnos donde Claude solo leyó archivos sin modificar nada. Mantiene el diario limpio.",
+    section_whom_label: "Para quién es",
+    section_whom_h2: "Hecho para quienes construyen.",
+    section_whom_p: "Si usas Claude Code, AutoDoc es para ti. Sin importar el tamaño de tu equipo.",
+    whom1_h: "Desarrolladores en solitario",
+    whom1_p: "Tu memoria externa. Nunca más pierdas el hilo entre sesiones.",
+    whom1_li1: "Retoma exactamente donde lo dejaste",
+    whom1_li2: "Historial de cambios por archivo",
+    whom1_li3: "Métricas de tokens por sesión",
+    whom2_h: "Equipos de desarrollo",
+    whom2_p: "Traspasos de turno sin fricción. El siguiente sabe exactamente qué hiciste.",
+    whom2_li1: "Diario compartido en el repositorio",
+    whom2_li2: "Resumen del día en un comando",
+    whom2_li3: "Trazabilidad de decisiones de Claude",
+    whom3_h: "Contribuidores Open Source",
+    whom3_p: "Documenta tus contribuciones AI-assisted de forma transparente y trazable.",
+    whom3_li1: "Auditoría de cambios asistidos por IA",
+    whom3_li2: "Soporte ES & EN integrado",
+    whom3_li3: "Extensible a nuevos lenguajes",
+    section_install_label: "Instalación",
+    section_install_h2: "En marcha en 60 segundos.",
+    section_install_p: "Un solo comando instala AutoDoc en cualquier proyecto existente.",
+    tab_mac: "macOS / Linux",
+    tab_win: "Windows",
+    acc_title: "<i class='fa-solid fa-wrench' style='color:var(--accent);margin-right:.5rem'></i>Instalación manual (paso a paso)",
+    acc_step1: "Copia <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/</code> y <code style='color:var(--accent-lt);font-family:monospace'>.claude/commands/</code> en la raíz de tu proyecto.",
+    acc_step2: "Crea o edita <code style='color:var(--accent-lt);font-family:monospace'>.claude/settings.local.json</code> con el siguiente hook:",
+    acc_done: "Listo. Abre el proyecto en Claude Code y empieza a trabajar.",
+    footer_tagline: "Lo que te llevás hoy: <span class='accent'>nunca más perderás el hilo de una sesión.</span>",
+    footer_sub: "AutoDoc transforma el trabajo olvidado en conocimiento persistente.",
+    footer_issues: "Issues",
+    footer_prs: "Pull Requests",
+    footer_docs: "Documentación",
+    footer_built: "Hecho con",
+    footer_for: "para la comunidad de Claude Code"
+  },
+  en: {
+    nav_problem: "The problem",
+    nav_how: "How it works",
+    nav_demo: "Demo",
+    nav_install: "Install",
+    badge_tokens: "0 extra tokens",
+    hero_h1_1: "Your code is already",
+    hero_h1_accent: "documented.",
+    hero_h1_2: "You just didn't know it yet.",
+    hero_sub: "AutoDoc hooks into the <strong>Stop</strong> event of Claude Code and writes your session diary automatically. No extra tokens. No manual effort. Ready for the next developer.",
+    cta_install: "Install in 60 seconds",
+    cta_github: "View on GitHub",
+    stat_tokens: "extra tokens",
+    stat_install: "installation",
+    stat_langs: "languages",
+    stat_free: "free & open source",
+    section_problem_label: "The problem",
+    section_problem_h2: "How many times did you start the day<br/>not knowing where you left off?",
+    section_problem_p: "Without AutoDoc, rebuilding yesterday's context costs you time, tokens and frustration. With AutoDoc, the diary is already written.",
+    before_label: "Without AutoDoc",
+    after_label: "With AutoDoc",
+    section_how_label: "How it works",
+    section_how_h2: "Three steps. Zero interruptions.",
+    section_how_p: "AutoDoc installs once and works silently. You work with Claude Code exactly as always.",
+    step1_h: "Install AutoDoc",
+    step1_p: "Run <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.sh</code> or <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>install.bat</code> pointing to your project. Ready in 60 seconds.",
+    step2_h: "Work as always",
+    step2_p: "Open Claude Code and work exactly the same. AutoDoc runs in the background, invisible. Nothing in your workflow changes.",
+    step3_h: "The diary writes itself",
+    step3_p: "After each Claude response, a structured entry is added to <code style='color:var(--accent-lt);background:rgba(217,119,6,.1);padding:1px 6px;border-radius:4px;font-family:monospace'>docs/YYYY-MM-DD.md</code>. Automatically.",
+    surprise_strong: "No API calls. No tokens. Completely free.",
+    surprise_p: "AutoDoc reads the local transcript from the <code style='color:var(--accent-lt);font-family:monospace'>Stop</code> hook of Claude Code. It makes no requests to Anthropic. Each diary entry costs exactly 0 additional tokens.",
+    section_demo_label: "Live demo",
+    section_demo_h2: "This is what the generated diary looks like",
+    section_demo_p: "A real entry after a work session. And the day summary with <code style='color:var(--accent-lt);font-family:monospace'>/summary</code>.",
+    copy_btn: "Copy",
+    section_config_label: "Configuration",
+    section_config_h2: "One JSON. Full control.",
+    section_config_p: "Edit <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/autodoc.config.json</code> to adapt AutoDoc to your project.",
+    cfg_lang: "<strong>\"es\"</strong> or <strong>\"en\"</strong> — language of the generated diary. Section titles, verbs and messages adapt automatically.",
+    cfg_docs_dir: "Folder where diaries are written. Can be any path relative to the project root.",
+    cfg_max_lines: "Lines extracted from Claude's response for the Result field. Adjust to your verbosity preferences.",
+    cfg_min_len: "Minimum characters in the user message to trigger the log. Avoids logging trivial turns.",
+    cfg_skip_ro: "<strong>true</strong> skips turns where Claude only read files without modifying anything. Keeps the diary clean.",
+    section_whom_label: "Who it's for",
+    section_whom_h2: "Built for those who build.",
+    section_whom_p: "If you use Claude Code, AutoDoc is for you. Regardless of your team size.",
+    whom1_h: "Solo developers",
+    whom1_p: "Your external memory. Never lose the thread between sessions again.",
+    whom1_li1: "Resume exactly where you left off",
+    whom1_li2: "Change history per file",
+    whom1_li3: "Token metrics per session",
+    whom2_h: "Development teams",
+    whom2_p: "Frictionless shift handoffs. The next person knows exactly what you did.",
+    whom2_li1: "Shared diary in the repository",
+    whom2_li2: "Day summary in one command",
+    whom2_li3: "Traceability of Claude's decisions",
+    whom3_h: "Open Source contributors",
+    whom3_p: "Document your AI-assisted contributions in a transparent and traceable way.",
+    whom3_li1: "Audit of AI-assisted changes",
+    whom3_li2: "Built-in ES & EN support",
+    whom3_li3: "Extensible to new languages",
+    section_install_label: "Installation",
+    section_install_h2: "Up and running in 60 seconds.",
+    section_install_p: "A single command installs AutoDoc into any existing project.",
+    tab_mac: "macOS / Linux",
+    tab_win: "Windows",
+    acc_title: "<i class='fa-solid fa-wrench' style='color:var(--accent);margin-right:.5rem'></i>Manual installation (step by step)",
+    acc_step1: "Copy <code style='color:var(--accent-lt);font-family:monospace'>Claude_Scripts/</code> and <code style='color:var(--accent-lt);font-family:monospace'>.claude/commands/</code> to your project root.",
+    acc_step2: "Create or edit <code style='color:var(--accent-lt);font-family:monospace'>.claude/settings.local.json</code> with the following hook:",
+    acc_done: "Done. Open the project in Claude Code and start working.",
+    footer_tagline: "What you take away today: <span class='accent'>you'll never lose the thread of a session again.</span>",
+    footer_sub: "AutoDoc transforms forgotten work into persistent knowledge.",
+    footer_issues: "Issues",
+    footer_prs: "Pull Requests",
+    footer_docs: "Documentation",
+    footer_built: "Made with",
+    footer_for: "for the Claude Code community"
+  }
+};
+
+/* Copy-text raw strings for clipboard */
+const copyTexts = {
+  diary: `### 14:32:10
+
+**Objetivo:** Implementar: middleware auth JWT
+
+> **Usuario:** Añade auth JWT a la API,
+verifica el token en cada ruta protegida
+
+**Resultado:**
+  - Middleware valida Bearer token
+  - Devuelve 401 si token inválido
+
+**Archivos:**
+  - Creados: \`auth.middleware.ts\`
+  - Modificados: \`app.ts\`, \`routes/api.ts\`
+
+**Cambios en código:**
+  - \`auth.middleware.ts\` creado (45 líneas): verifyToken, authMiddleware
+  - \`app.ts\`: añadido applyMiddleware
+
+\`3xEdit, 1xWrite, 1xRead\`
+\`Tokens: 2.1k (in:1.4k, out:0.7k)\`
+\`Sesión total: 18.3k\``,
+  summary: `## RESUMEN DEL DÍA — 2026-03-28
+
+**Proyecto:** mi-api
+**Sesión:** 09:15:04 → 17:48:22
+**Turnos completados:** 12
+
+### Objetivos trabajados
+1. Scaffolding inicial del proyecto
+2. Corregir error CORS del frontend
+3. Middleware de autenticación JWT
+   ...
+
+### Para el siguiente turno
+- Revisar: \`auth.middleware.ts\`, \`app.ts\`
+- Último objetivo: Auth JWT
+- Continuar desde: 17:48:22`,
+  config: `{
+  "lang": "es",
+  "docs_dir": "docs",
+  "max_summary_lines": 3,
+  "max_changes_in_summary": 15,
+  "min_message_length": 30,
+  "skip_read_only_turns": true
+}`,
+  "install-mac": `# Descarga AutoDoc
+git clone https://github.com/David01mc/autodoc.git
+
+# Instala en tu proyecto (reemplaza la ruta)
+bash autodoc/install.sh /ruta/a/tu-proyecto`,
+  "install-win": `:: Descarga AutoDoc
+git clone https://github.com/David01mc/autodoc.git
+
+:: Instala en tu proyecto (reemplaza la ruta)
+autodoc\\install.bat C:\\ruta\\a\\tu-proyecto`,
+  "manual-hook": `{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{
+        "type": "command",
+        "command": "python Claude_Scripts/log_activity.py",
+        "timeout": 15
+      }]}]
+  }}`
+};
+
+/* ══════════════════════════════════════════════
+   Language switcher
+══════════════════════════════════════════════ */
+let currentLang = 'es';
+
+function setLang(lang) {
+  currentLang = lang;
+  const strings = i18n[lang];
+
+  // Update data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (strings[key] !== undefined) {
+      el.innerHTML = strings[key];
+    }
+  });
+
+  // Update lang indicators
+  document.getElementById('lang-es').classList.toggle('active', lang === 'es');
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+
+  // Update html lang attr
+  document.documentElement.lang = lang;
+}
+
+document.getElementById('lang-toggle').addEventListener('click', () => {
+  setLang(currentLang === 'es' ? 'en' : 'es');
+});
+
+// Init
+setLang('es');
+
+/* ══════════════════════════════════════════════
+   Hamburger menu
+══════════════════════════════════════════════ */
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('nav-links');
+
+hamburger.addEventListener('click', () => {
+  navLinks.classList.toggle('open');
+});
+
+// Close on link click
+navLinks.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => navLinks.classList.remove('open'));
+});
+
+/* ══════════════════════════════════════════════
+   Tabs (Install)
+══════════════════════════════════════════════ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  });
+});
+
+/* ══════════════════════════════════════════════
+   Accordion
+══════════════════════════════════════════════ */
+document.getElementById('acc-header').addEventListener('click', () => {
+  document.getElementById('manual-accordion').classList.toggle('open');
+});
+
+/* ══════════════════════════════════════════════
+   Copy buttons
+══════════════════════════════════════════════ */
+document.querySelectorAll('.editor-copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.copy;
+    const text = copyTexts[key] || '';
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (currentLang === 'es' ? 'Copiado' : 'Copied');
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (currentLang === 'es' ? 'Copiado' : 'Copied');
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  });
+});
+
+/* ══════════════════════════════════════════════
+   IntersectionObserver — fade-in on scroll
+══════════════════════════════════════════════ */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+/* ══════════════════════════════════════════════
+   Navbar active section highlight
+══════════════════════════════════════════════ */
+const sections = document.querySelectorAll('section[id]');
+const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
+
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navAnchors.forEach(a => {
+        a.style.color = a.getAttribute('href') === '#' + entry.target.id
+          ? 'var(--accent-lt)' : '';
+      });
+    }
+  });
+}, { threshold: 0.4 });
+
+sections.forEach(s => sectionObserver.observe(s));
+</script>
+</body>
+</html>
