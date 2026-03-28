@@ -1,2 +1,5 @@
 # AutoDoc — personal diary files (not for version control)
 docs/
+
+# Landing page — lives in gh-pages branch, not in main
+index.html
