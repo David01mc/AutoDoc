@@ -526,6 +526,31 @@
     .install-panel { display: none; }
     .install-panel.active { display: block; }
 
+    /* ─── FEATURES ─── */
+    #features { background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 4rem 0; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2.5rem;
+    }
+    .feature-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.4rem 1.5rem;
+      display: flex; flex-direction: column; gap: .6rem;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .feature-card:hover { border-color: var(--accent); box-shadow: 0 4px 20px var(--accent-glow); }
+    .feature-icon {
+      width: 38px; height: 38px; border-radius: 9px;
+      background: var(--accent-glow);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 1rem;
+    }
+    .feature-card strong { font-size: .92rem; color: var(--text); }
+    .feature-card span { font-size: .83rem; color: var(--text-muted); line-height: 1.55; }
+    .feature-card code { font-family: 'JetBrains Mono', monospace; font-size: .78rem; background: var(--bg-card); padding: 1px 5px; border-radius: 4px; }
+
     /* ─── FOOTER ─── */
     footer {
       background: var(--bg-card); border-top: 1px solid var(--border);
@@ -666,19 +691,18 @@
       <span class="term-title mono">docs/2026-03-28.md</span>
     </div>
     <div class="term-body" id="term-body">
-      <span class="term-line" id="tl0"><span class="t-time">### 14:32:10</span></span>
+      <span class="term-line" id="tl0"><span class="t-time">### 14:32:10</span><span class="t-muted"> — </span><span class="t-bold">Implementar: JWT auth en API Express</span></span>
       <span class="term-line empty" id="tl1"></span>
-      <span class="term-line" id="tl2"><span class="t-bold">**Objetivo:**</span><span class="t-muted"> Implementar: añadir autenticación JWT</span></span>
-      <span class="term-line empty" id="tl3"></span>
-      <span class="term-line" id="tl4"><span class="t-quote">&gt; **Usuario:** Añade JWT auth a la API Express</span></span>
-      <span class="term-line empty" id="tl5"></span>
-      <span class="term-line" id="tl6"><span class="t-bold">**Resultado:**</span></span>
-      <span class="term-line" id="tl7"><span class="t-muted">  - Middleware valida Bearer token en cada petición</span></span>
-      <span class="term-line" id="tl8"><span class="t-muted">  - Devuelve 401 si el token es inválido</span></span>
-      <span class="term-line empty" id="tl9"></span>
-      <span class="term-line" id="tl10"><span class="t-bold">**Archivos:**</span></span>
-      <span class="term-line" id="tl11"><span class="t-muted">  - Creados: </span><span class="t-code">`auth.middleware.ts`</span></span>
-      <span class="term-line" id="tl12"><span class="t-muted">  - Modificados: </span><span class="t-code">`app.ts`</span><span class="t-muted">, </span><span class="t-code">`routes/api.ts`</span></span>
+      <span class="term-line" id="tl2"><span class="t-quote">&gt; **Usuario:** Añade JWT auth a la API Express</span></span>
+      <span class="term-line" id="tl3"><span class="t-quote">&gt; 📷 Imagen adjunta (image/png)</span></span>
+      <span class="term-line empty" id="tl4"></span>
+      <span class="term-line" id="tl5"><span class="t-bold">**Resultado:**</span></span>
+      <span class="term-line" id="tl6"><span class="t-muted">  Middleware valida Bearer token en cada petición</span></span>
+      <span class="term-line" id="tl7"><span class="t-muted">  Devuelve 401 si el token es inválido o expirado</span></span>
+      <span class="term-line empty" id="tl8"></span>
+      <span class="term-line" id="tl9"><span class="t-bold">**Archivos:**</span></span>
+      <span class="term-line" id="tl10"><span class="t-muted">  - Creados: </span><span class="t-code">`auth.middleware.ts`</span></span>
+      <span class="term-line" id="tl11"><span class="t-muted">  - Modificados: </span><span class="t-code">`app.ts`</span><span class="t-muted">, </span><span class="t-code">`routes/api.ts`</span></span>
       <span class="cursor" id="term-cursor"></span>
     </div>
   </div>
@@ -861,15 +885,14 @@
           <span class="demo-code-line">&nbsp;</span>
           <span class="demo-code-line dc-dim">---</span>
           <span class="demo-code-line">&nbsp;</span>
-          <span class="demo-code-line dc-time">### 14:32:10</span>
-          <span class="demo-code-line">&nbsp;</span>
-          <span class="demo-code-line"><span class="dc-bold">**Objetivo:**</span><span class="dc-muted"> Implementar: añadir autenticación JWT</span></span>
+          <span class="demo-code-line"><span class="dc-time">### 14:32:10</span><span class="dc-muted"> — </span><span class="dc-bold">Implementar: JWT auth en API Express</span></span>
           <span class="demo-code-line">&nbsp;</span>
           <span class="demo-code-line dc-quote">&gt; **Usuario:** Añade JWT auth a la API Express</span>
+          <span class="demo-code-line dc-quote">&gt; 📷 Imagen adjunta (image/png)</span>
           <span class="demo-code-line">&nbsp;</span>
           <span class="demo-code-line dc-bold">**Resultado:**</span>
-          <span class="demo-code-line dc-muted">  - Middleware valida Bearer token en cada petición</span>
-          <span class="demo-code-line dc-muted">  - Devuelve 401 si el token es inválido</span>
+          <span class="demo-code-line dc-muted">  Middleware valida Bearer token en cada petición</span>
+          <span class="demo-code-line dc-muted">  Devuelve 401 si el token es inválido o expirado</span>
           <span class="demo-code-line">&nbsp;</span>
           <span class="demo-code-line dc-bold">**Archivos:**</span>
           <span class="demo-code-line"><span class="dc-muted">  - Creados: </span><span class="dc-code">`auth.middleware.ts`</span></span>
@@ -904,6 +927,35 @@
           <span class="demo-code-line">&nbsp;</span>
           <span class="demo-code-line dc-dim"><!-- generado por autodoc --></span>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── NUEVAS FUNCIONES ─── -->
+<section id="features">
+  <div class="container">
+    <h2 class="section-title fade-in" data-i18n="features_title">Lo que AutoDoc captura</h2>
+    <div class="features-grid fade-in">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-paperclip"></i></div>
+        <strong data-i18n="feat_1_title">Adjuntos detectados</strong>
+        <span data-i18n="feat_1_desc">Imágenes y documentos subidos a Claude quedan registrados en el diario con tipo y nombre.</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-table"></i></div>
+        <strong data-i18n="feat_2_title">Tablas preservadas</strong>
+        <span data-i18n="feat_2_desc">Las tablas markdown de Claude se replican fielmente en el diario. Nada se convierte a texto plano.</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-align-left"></i></div>
+        <strong data-i18n="feat_3_title">Formato fiel</strong>
+        <span data-i18n="feat_3_desc">Negritas, bullets y listas numeradas se escriben tal cual los genera Claude. Sin pérdida de estructura.</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fa-solid fa-sliders"></i></div>
+        <strong data-i18n="feat_4_title">Sin límite de texto</strong>
+        <span data-i18n="feat_4_desc"><code>max_line_length: 0</code> — sin truncado. El diario captura las respuestas completas.</span>
       </div>
     </div>
   </div>
@@ -959,7 +1011,8 @@
 <span class="cfg-punct">{</span>
   <span class="cfg-key">"lang"</span><span class="cfg-punct">:</span> <span class="cfg-val">"es"</span><span class="cfg-punct">,</span>                    <span class="cfg-comment">// "es" o "en"</span>
   <span class="cfg-key">"docs_dir"</span><span class="cfg-punct">:</span> <span class="cfg-val">"docs"</span><span class="cfg-punct">,</span>               <span class="cfg-comment">// carpeta de salida</span>
-  <span class="cfg-key">"max_summary_lines"</span><span class="cfg-punct">:</span> <span class="cfg-num">3</span><span class="cfg-punct">,</span>           <span class="cfg-comment">// líneas extraídas por respuesta</span>
+  <span class="cfg-key">"max_summary_lines"</span><span class="cfg-punct">:</span> <span class="cfg-num">15</span><span class="cfg-punct">,</span>          <span class="cfg-comment">// líneas extraídas por respuesta</span>
+  <span class="cfg-key">"max_line_length"</span><span class="cfg-punct">:</span> <span class="cfg-num">0</span><span class="cfg-punct">,</span>             <span class="cfg-comment">// 0 = sin truncado (recomendado)</span>
   <span class="cfg-key">"max_changes_in_summary"</span><span class="cfg-punct">:</span> <span class="cfg-num">15</span><span class="cfg-punct">,</span>     <span class="cfg-comment">// cambios máx. en /summary</span>
   <span class="cfg-key">"min_message_length"</span><span class="cfg-punct">:</span> <span class="cfg-num">30</span><span class="cfg-punct">,</span>         <span class="cfg-comment">// mín. chars para loguear</span>
   <span class="cfg-key">"skip_read_only_turns"</span><span class="cfg-punct">:</span> <span class="cfg-val">true</span>      <span class="cfg-comment">// omitir turnos solo-lectura</span>
@@ -1148,6 +1201,15 @@
       install_note: 'Requiere <strong>Python 3.8+</strong> y <strong>Claude Code CLI</strong>',
       footer_by: 'Creado por',
       sticky_cta: 'Instalar',
+      features_title: 'Lo que AutoDoc captura',
+      feat_1_title: 'Adjuntos detectados',
+      feat_1_desc: 'Imágenes y documentos subidos a Claude quedan registrados en el diario con tipo y nombre.',
+      feat_2_title: 'Tablas preservadas',
+      feat_2_desc: 'Las tablas markdown de Claude se replican fielmente en el diario. Nada se convierte a texto plano.',
+      feat_3_title: 'Formato fiel',
+      feat_3_desc: 'Negritas, bullets y listas numeradas se escriben tal cual los genera Claude. Sin pérdida de estructura.',
+      feat_4_title: 'Sin límite de texto',
+      feat_4_desc: '<code>max_line_length: 0</code> — sin truncado. El diario captura las respuestas completas.',
     },
     en: {
       nav_how: 'How it works',
@@ -1196,6 +1258,15 @@
       install_note: 'Requires <strong>Python 3.8+</strong> and <strong>Claude Code CLI</strong>',
       footer_by: 'Created by',
       sticky_cta: 'Install',
+      features_title: 'What AutoDoc captures',
+      feat_1_title: 'Attachments detected',
+      feat_1_desc: 'Images and documents uploaded to Claude are recorded in the diary with type and name.',
+      feat_2_title: 'Tables preserved',
+      feat_2_desc: 'Markdown tables from Claude are faithfully replicated in the diary. Nothing is converted to plain text.',
+      feat_3_title: 'Faithful formatting',
+      feat_3_desc: 'Bold, bullets and numbered lists are written exactly as Claude generates them. No structure lost.',
+      feat_4_title: 'No text limit',
+      feat_4_desc: '<code>max_line_length: 0</code> — no truncation. The diary captures full responses.',
     }
   };
 
