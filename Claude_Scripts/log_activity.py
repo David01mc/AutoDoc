@@ -38,6 +38,9 @@ STRINGS = {
         "agent":          "Agente",
         "searches":       "{n} búsquedas realizadas",
         "commands_n":     "{n} comandos ejecutados",
+        "attach_image":   "📷 Imagen adjunta",
+        "attach_doc":     "📄 Documento adjunto",
+        "attach_file":    "📎 Archivo adjunto",
         "func":           "función",
         "cls":            "clase",
         "added":          "añadido",
@@ -70,6 +73,9 @@ STRINGS = {
         "agent":          "Agent",
         "searches":       "{n} searches performed",
         "commands_n":     "{n} commands executed",
+        "attach_image":   "📷 Image attached",
+        "attach_doc":     "📄 Document attached",
+        "attach_file":    "📎 File attached",
         "func":           "function",
         "cls":            "class",
         "added":          "added",
@@ -103,6 +109,7 @@ def load_config(project_root):
         "docs_dir": "docs",
         "max_summary_lines": 3,
         "max_changes_in_summary": 15,
+        "max_line_length": 0,
         "min_message_length": 30,
         "skip_read_only_turns": True,
     }
@@ -127,6 +134,18 @@ _SYSTEM_TAG_PATTERNS = [
     r"<command-name>.*?</command-name>",
     r"<functions>.*?</functions>",
 ]
+
+# Prefijos que indican que el mensaje es un resumen de contexto de sesión anterior
+_CONTINUATION_PREFIXES = [
+    "This session is being continued from a previous conversation",
+    "Esta sesión continúa desde una conversación anterior",
+]
+
+# Marcador usado en el diario cuando la entrada es de una sesión continuada
+_CONTINUATION_LABEL = "[Continuación de sesión anterior]"
+
+# Marcadores que indican que la respuesta es un /summary — evitar re-capturar el diario
+_SUMMARY_MARKERS = ["## RESUMEN DEL DÍA", "## DAILY SUMMARY"]
 
 
 def strip_system_tags(text):
@@ -161,9 +180,19 @@ def extract_definitions_python(code, lang):
                 names.append(f"{t('func', lang)} `{node.name}`")
             elif isinstance(node, ast.ClassDef):
                 names.append(f"{t('cls', lang)} `{node.name}`")
+        return names
     except SyntaxError:
-        pass
-    return names
+        # Fallback regex para snippets parciales que no son Python válido
+        seen = set()
+        for m in re.finditer(r'\bdef\s+(\w+)\s*\(', code):
+            if m.group(1) not in seen:
+                seen.add(m.group(1))
+                names.append(f"{t('func', lang)} `{m.group(1)}`")
+        for m in re.finditer(r'\bclass\s+(\w+)', code):
+            if m.group(1) not in seen:
+                seen.add(m.group(1))
+                names.append(f"{t('cls', lang)} `{m.group(1)}`")
+        return names
 
 
 # ── AST: JavaScript / TypeScript ─────────────────────────────────────────────
@@ -285,12 +314,14 @@ def is_bold_header(line):
     return bool(re.match(r'^\*\*[^*]{3,}\*\*\s*$', line))
 
 
-def _extract_lines(text, max_lines, pre_code_only=False):
+def _extract_lines(text, max_lines, pre_code_only=False, max_len=0):
     """
     Extrae líneas de resumen de un bloque de texto.
     Si pre_code_only=True, se detiene en el primer bloque de código LARGO (>2 líneas).
     Bloques cortos (1-2 líneas) son ejemplos/resultados y se incluyen.
+    max_len=0 significa sin límite de longitud por línea.
     """
+    _t = (lambda s: truncate(s, max_len)) if max_len > 0 else (lambda s: str(s).strip())
     lines = text.split("\n")
     result = []
     inside_code_block = False
@@ -309,14 +340,16 @@ def _extract_lines(text, max_lines, pre_code_only=False):
                 # Fin de bloque
                 inside_code_block = False
                 if pre_code_only and len(code_block_lines) > 2:
-                    break   # Bloque largo → parar
-                # Bloque corto (1-2 líneas) → incluir su contenido como resultado
-                for cl in code_block_lines:
-                    cl = cl.strip()
-                    if len(cl) >= 10:
-                        result.append(truncate(cl, 180))
-                        if len(result) >= max_lines:
-                            break
+                    break   # Bloque largo en modo pre_code → parar
+                # Solo incluir bloques CORTOS (≤2 líneas) como ejemplos/resultados
+                # Los bloques largos se descartan siempre (son implementación, no resumen)
+                if len(code_block_lines) <= 2:
+                    for cl in code_block_lines:
+                        cl = cl.strip()
+                        if len(cl) >= 10:
+                            result.append(_t(cl))
+                            if len(result) >= max_lines:
+                                break
                 code_block_lines = []
             i += 1
             continue
@@ -330,39 +363,55 @@ def _extract_lines(text, max_lines, pre_code_only=False):
             i += 1
             continue
 
-        if line.startswith("---") or line.startswith("===") or line.startswith("#"):
+        if line.startswith("---") or line.startswith("==="):
+            i += 1
+            continue
+        if line.startswith("#"):
+            # Incluir ## y ### como puntos de resumen; ignorar # y ####+
+            m = re.match(r'^(#+)\s*(.*)', line)
+            if m:
+                level = len(m.group(1))
+                if 2 <= level <= 3:
+                    clean = m.group(2).strip()
+                    clean = re.sub(r'^\d+[.)]\s+', '', clean)  # quitar "1. " inicial
+                    if len(clean) >= 10:
+                        result.append(_t(clean))
+                        if len(result) >= max_lines:
+                            break
             i += 1
             continue
         if line.startswith("|"):
-            if is_table_separator(line):
+            # Recoger la tabla completa como bloque markdown
+            table_rows = []
+            while i < len(lines):
+                tl = lines[i].strip()
+                if not tl.startswith("|"):
+                    break
+                table_rows.append(tl)
                 i += 1
-                continue
-            cells = parse_table_row(line)
-            if len(cells) >= 2 and len(cells[0]) < 50:
-                entry = f"{cells[0]}: {cells[1]}"
-                if len(entry) >= 20:
-                    result.append(truncate(entry, 180))
-            elif len(cells) == 1 and len(cells[0]) >= 20:
-                result.append(truncate(cells[0], 180))
-            if len(result) >= max_lines:
-                break
-            i += 1
-            continue
+            if len(table_rows) >= 2:
+                result.append("\n".join(table_rows))
+                if len(result) >= max_lines:
+                    break
+            continue  # i ya avanzó en el while
 
         # Títulos en negrita puros (**Texto**) — usar como punto
         if is_bold_header(line):
             clean = re.sub(r'\*\*([^*]+)\*\*', r'\1', line).strip()
             if len(clean) >= 10:
-                result.append(truncate(clean, 180))
+                result.append(_t(clean))
                 if len(result) >= max_lines:
                     break
             i += 1
             continue
 
-        # Líneas que empiezan con código inline (`foo`) — son explicaciones técnicas, descartar
+        # Líneas que son SOLO código inline sin texto legible — descartar
+        # Pero conservar líneas mixtas como "`foo` → `bar` → `baz`"
         if line.startswith("`"):
-            i += 1
-            continue
+            non_code = re.sub(r'`[^`]+`', '', line).strip()
+            if len(non_code) < 5:
+                i += 1
+                continue
 
         # Líneas con alta densidad de código — descartar
         code_chars = line.count("`") + line.count("(") + line.count(")")
@@ -373,13 +422,14 @@ def _extract_lines(text, max_lines, pre_code_only=False):
             i += 1
             continue
 
-        clean = re.sub(r'^[-*>]+\s*', '', line)
-        clean = re.sub(r'^\d+[.)]\s+', '', clean)
+        # Quitar solo marcadores de cita (> texto)
+        # Preservar: ** negritas, "1." listas numeradas, "- " bullets
+        clean = re.sub(r'^>\s*', '', line)
         clean = clean_markdown(clean)
         if len(clean) < 20:
             i += 1
             continue
-        result.append(truncate(clean, 180))
+        result.append(_t(clean))
         if len(result) >= max_lines:
             break
         i += 1
@@ -387,20 +437,40 @@ def _extract_lines(text, max_lines, pre_code_only=False):
     return result
 
 
-def build_summary_text(assistant_texts, last_message, max_lines):
-    text_source = last_message or " ".join(assistant_texts)
-    if not text_source:
+def build_summary_text(assistant_texts, last_message, max_lines, max_len=0):
+    if not assistant_texts and not last_message:
         return []
 
-    # Prioridad 1: texto ANTES del primer bloque de código
-    # Es donde Claude suele dar el resultado de alto nivel
-    pre_code = _extract_lines(text_source, max_lines, pre_code_only=True)
-    if len(pre_code) >= 2:
-        return pre_code
+    # Si la respuesta es la salida de /summary, no re-capturar el diario como resultado
+    all_text = " ".join(t for t in assistant_texts if t)
+    if any(marker in (last_message + all_text) for marker in _SUMMARY_MARKERS):
+        return []
 
-    # Prioridad 2: si no hay suficiente texto previo al código,
-    # escanear todo el texto (ignorando bloques de código)
-    return _extract_lines(text_source, max_lines, pre_code_only=False)
+    # Candidatos en orden de preferencia:
+    # 1. Último bloque de texto del transcript (donde Claude pone las conclusiones)
+    # 2. last_assistant_message del hook (puede ser el mismo u otro fragmento)
+    # 3. Todos los textos unidos
+    candidates = []
+    if assistant_texts:
+        last_block = next(
+            (t for t in reversed(assistant_texts) if t and len(t.strip()) >= 50), ""
+        )
+        if last_block:
+            candidates.append(last_block)
+    if last_message and last_message not in candidates:
+        candidates.append(last_message)
+    if all_text and all_text not in candidates:
+        candidates.append(all_text)
+
+    # Intentar primero pre_code_only (texto antes del primer bloque de código largo)
+    for source in candidates:
+        result = _extract_lines(source, max_lines, pre_code_only=True, max_len=max_len)
+        if len(result) >= 2:
+            return result
+
+    # Fallback: escaneo completo sobre el candidato más rico
+    best = candidates[0] if candidates else (last_message or "")
+    return _extract_lines(best, max_lines, pre_code_only=False, max_len=max_len)
 
 
 # ── Objective inference ───────────────────────────────────────────────────────
@@ -494,6 +564,43 @@ def extract_user_question(entry):
     return ""
 
 
+def extract_attachments(entry):
+    """Detecta imágenes y documentos adjuntos en el mensaje del usuario."""
+    content = entry.get("message", {}).get("content", [])
+    if not isinstance(content, list):
+        return []
+
+    attachments = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type", "")
+
+        if btype == "image":
+            source = block.get("source", {})
+            media_type = source.get("media_type", "image")
+            # Intentar obtener nombre si viene por URL
+            url = source.get("url", "")
+            name = os.path.basename(url.split("?")[0]) if url else ""
+            attachments.append({
+                "kind": "image",
+                "media_type": media_type,
+                "name": name,
+            })
+
+        elif btype == "document":
+            source = block.get("source", {})
+            media_type = source.get("media_type", "document")
+            name = block.get("title") or block.get("name") or ""
+            attachments.append({
+                "kind": "document",
+                "media_type": media_type,
+                "name": name,
+            })
+
+    return attachments
+
+
 def extract_token_usage(messages, last_user_idx):
     turn_input = turn_output = session_input = session_output = 0
     for i, entry in enumerate(messages):
@@ -517,7 +624,7 @@ def extract_token_usage(messages, last_user_idx):
 
 def extract_last_turn(messages):
     tool_uses, assistant_texts = [], []
-    user_question, token_usage = "", {}
+    user_question, token_usage, attachments = "", {}, []
 
     last_user_idx = -1
     for i in range(len(messages) - 1, -1, -1):
@@ -526,10 +633,13 @@ def extract_last_turn(messages):
             break
 
     if last_user_idx < 0:
-        return user_question, tool_uses, assistant_texts, token_usage
+        return user_question, tool_uses, assistant_texts, token_usage, attachments
 
     user_question = extract_user_question(messages[last_user_idx])
+    if any(user_question.startswith(p) for p in _CONTINUATION_PREFIXES):
+        user_question = _CONTINUATION_LABEL
     token_usage = extract_token_usage(messages, last_user_idx)
+    attachments = extract_attachments(messages[last_user_idx])
 
     for entry in messages[last_user_idx + 1:]:
         msg = entry.get("message", {})
@@ -552,12 +662,12 @@ def extract_last_turn(messages):
                 elif block.get("type") == "tool_use":
                     tool_uses.append({"name": block.get("name", ""), "input": block.get("input", {})})
 
-    return user_question, tool_uses, assistant_texts, token_usage
+    return user_question, tool_uses, assistant_texts, token_usage, attachments
 
 
 # ── Synthesis ─────────────────────────────────────────────────────────────────
 
-def synthesize(tool_uses, assistant_texts, last_message, user_question, token_usage, cwd, cfg):
+def synthesize(tool_uses, assistant_texts, last_message, user_question, token_usage, cwd, cfg, attachments=None):
     lang = cfg["lang"]
     max_lines = cfg["max_summary_lines"]
 
@@ -599,6 +709,7 @@ def synthesize(tool_uses, assistant_texts, last_message, user_question, token_us
         "project": os.path.basename(os.path.normpath(cwd)) if cwd else None,
         "objective": "",
         "question": "",
+        "attachments": attachments or [],
         "summary": [],
         "files": [],
         "changes": code_changes,
@@ -611,7 +722,8 @@ def synthesize(tool_uses, assistant_texts, last_message, user_question, token_us
         result["question"] = user_question.replace("\n", " ").strip()
         result["objective"] = infer_objective(user_question, tool_uses, lang)
 
-    result["summary"] = build_summary_text(assistant_texts, last_message, max_lines)
+    result["summary"] = build_summary_text(assistant_texts, last_message, max_lines,
+                                             max_len=cfg.get("max_line_length", 0))
 
     if files_created:
         result["files"].append(f"{t('created', lang)}: {', '.join(f'`{f}`' for f in sorted(files_created))}")
@@ -657,12 +769,28 @@ def write_entry(data_out, lang, docs_dir, cfg):
         f.write(f"---\n\n### {now:%H:%M:%S}{objective_inline}\n\n")
 
         if data_out["question"]:
-            f.write(f"> **{t('user', lang)}:** {data_out['question']}\n\n")
+            f.write(f"> **{t('user', lang)}:** {data_out['question']}\n")
+            for att in data_out.get("attachments", []):
+                if att["kind"] == "image":
+                    label = t("attach_image", lang)
+                elif att["kind"] == "document":
+                    label = t("attach_doc", lang)
+                else:
+                    label = t("attach_file", lang)
+                detail = f" ({att['media_type']})" if att.get("media_type") else ""
+                name = f" — {att['name']}" if att.get("name") else ""
+                f.write(f"> {label}{detail}{name}\n")
+            f.write("\n")
 
         if data_out["summary"]:
-            f.write(f"**{t('result', lang)}:**\n")
+            f.write(f"**{t('result', lang)}:**\n\n")
             for line in data_out["summary"]:
-                f.write(f"  - {line}\n")
+                if "\n" in line:
+                    # Bloque multi-línea (tabla markdown) — sin indentación, con separación
+                    f.write(line + "\n\n")
+                else:
+                    # Texto o lista — con línea en blanco para separar del siguiente bloque
+                    f.write(f"{line}\n\n")
             f.write("\n")
 
         if data_out["files"]:
@@ -721,7 +849,7 @@ def main():
         return
 
     messages = parse_transcript(transcript_path)
-    user_question, tool_uses, assistant_texts, token_usage = extract_last_turn(messages)
+    user_question, tool_uses, assistant_texts, token_usage, attachments = extract_last_turn(messages)
 
     if not tool_uses and len(last_message) < cfg["min_message_length"]:
         return
@@ -730,7 +858,8 @@ def main():
         return
 
     data_out, lang = synthesize(tool_uses, assistant_texts, last_message,
-                                 user_question, token_usage, cwd, cfg)
+                                 user_question, token_usage, cwd, cfg,
+                                 attachments=attachments)
 
     has_content = (data_out["question"] or data_out["summary"]
                    or data_out["files"] or data_out["actions"])
