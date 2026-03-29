@@ -250,7 +250,23 @@ def extract_definitions(code, filename, lang):
 
 # ── Change descriptors ────────────────────────────────────────────────────────
 
-def describe_edit(filename, old, new, lang):
+_EXT_LANG = {
+    "py": "python", "js": "javascript", "ts": "typescript",
+    "tsx": "tsx", "jsx": "jsx", "json": "json", "sh": "bash",
+    "bat": "bat", "md": "markdown", "css": "css", "html": "html",
+}
+
+def _code_snippet(code, max_lines):
+    """Return fenced code block with up to max_lines lines."""
+    if not code.strip() or max_lines <= 0:
+        return ""
+    lines = code.strip().split("\n")
+    snippet_lines = lines[:max_lines]
+    tail = f"\n# ... +{len(lines) - max_lines} líneas" if len(lines) > max_lines else ""
+    return "\n".join(snippet_lines) + tail
+
+
+def describe_edit(filename, old, new, lang, max_code_lines=0):
     old_lines = old.strip().split("\n") if old.strip() else []
     new_lines = new.strip().split("\n") if new.strip() else []
     delta = len(new_lines) - len(old_lines)
@@ -274,10 +290,16 @@ def describe_edit(filename, old, new, lang):
             parts.append("modified" if lang == "en" else "modificado")
 
     detail = "; ".join(parts)
-    return t("file_modified", lang, name=filename, detail=detail)
+    desc = t("file_modified", lang, name=filename, detail=detail)
+    if max_code_lines > 0 and new.strip():
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        hint = _EXT_LANG.get(ext, "")
+        snippet = _code_snippet(new, max_code_lines)
+        desc += f"\n```{hint}\n{snippet}\n```"
+    return desc
 
 
-def describe_write(filename, content, lang):
+def describe_write(filename, content, lang, max_code_lines=0):
     lines = content.strip().split("\n") if content.strip() else []
     defs = extract_definitions(content, filename, lang)
     desc = t("file_created", lang, name=filename, lines=len(lines))
@@ -286,6 +308,11 @@ def describe_write(filename, content, lang):
         if len(defs) > 5:
             listed += f" +{len(defs) - 5}"
         desc += f": {listed}"
+    if max_code_lines > 0 and content.strip():
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        hint = _EXT_LANG.get(ext, "")
+        snippet = _code_snippet(content, max_code_lines)
+        desc += f"\n```{hint}\n{snippet}\n```"
     return desc
 
 
@@ -294,8 +321,9 @@ def describe_write(filename, content, lang):
 def clean_markdown(text):
     # Convertir links [texto](url) → texto
     text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    # Eliminar inline code muy largo (ruido), conservar el corto
-    text = re.sub(r'`[^`]{40,}`', '', text)
+    # Eliminar inline code muy largo SIN espacios (file paths, hashes, identifiers)
+    # NO eliminar spans entre backticks separados que contengan texto legible con espacios
+    text = re.sub(r'`[^\s`]{60,}`', '', text)
     # Conservar ** y * — el diario es Markdown, se renderizan como negrita/cursiva
     return text.strip()
 
@@ -446,21 +474,34 @@ def build_summary_text(assistant_texts, last_message, max_lines, max_len=0):
     if any(marker in (last_message + all_text) for marker in _SUMMARY_MARKERS):
         return []
 
-    # Candidatos en orden de preferencia:
-    # 1. Último bloque de texto del transcript (donde Claude pone las conclusiones)
-    # 2. last_assistant_message del hook (puede ser el mismo u otro fragmento)
-    # 3. Todos los textos unidos
-    candidates = []
+    # Seleccionar el "último bloque estructurado": preferir bloques con negritas o bullets
+    # sobre párrafos de cierre en prosa plana.
+    last_block = ""
     if assistant_texts:
+        # Primero: bloque con contenido estructurado (**bold**, bullets, headers)
         last_block = next(
-            (t for t in reversed(assistant_texts) if t and len(t.strip()) >= 50), ""
+            (t for t in reversed(assistant_texts)
+             if t and len(t.strip()) >= 50
+             and any(m in t for m in ("**", "- ", "* ", "# "))),
+            ""
         )
-        if last_block:
-            candidates.append(last_block)
+        # Fallback: cualquier bloque suficientemente largo
+        if not last_block:
+            last_block = next(
+                (t for t in reversed(assistant_texts) if t and len(t.strip()) >= 50), ""
+            )
+
+    # Candidatos en orden de preferencia:
+    # 1. Todos los textos unidos (fuente más completa — captura respuestas multi-bloque)
+    # 2. Último bloque estructurado (útil cuando la respuesta es corta y limpia)
+    # 3. last_assistant_message del hook
+    candidates = []
+    if all_text:
+        candidates.append(all_text)
+    if last_block and last_block not in candidates:
+        candidates.append(last_block)
     if last_message and last_message not in candidates:
         candidates.append(last_message)
-    if all_text and all_text not in candidates:
-        candidates.append(all_text)
 
     # Intentar primero pre_code_only (texto antes del primer bloque de código largo)
     for source in candidates:
@@ -673,6 +714,7 @@ def synthesize(tool_uses, assistant_texts, last_message, user_question, token_us
 
     files_modified, files_created, files_read = set(), set(), set()
     commands_run, searches, agents, code_changes = [], [], [], []
+    max_code_lines = cfg.get("max_code_lines_in_changes", 0)
 
     for tu in tool_uses:
         name = tu["name"]
@@ -683,13 +725,13 @@ def synthesize(tool_uses, assistant_texts, last_message, user_question, token_us
             if path:
                 fname = os.path.basename(path)
                 files_modified.add(fname)
-                code_changes.append(describe_edit(fname, inp.get("old_string", ""), inp.get("new_string", ""), lang))
+                code_changes.append(describe_edit(fname, inp.get("old_string", ""), inp.get("new_string", ""), lang, max_code_lines))
         elif name == "Write":
             path = inp.get("file_path", "")
             if path:
                 fname = os.path.basename(path)
                 files_created.add(fname)
-                code_changes.append(describe_write(fname, inp.get("content", ""), lang))
+                code_changes.append(describe_write(fname, inp.get("content", ""), lang, max_code_lines))
         elif name == "Read":
             path = inp.get("file_path", "")
             if path:
@@ -800,9 +842,13 @@ def write_entry(data_out, lang, docs_dir, cfg):
             f.write("\n")
 
         if data_out["changes"]:
-            f.write(f"**{t('code_changes', lang)}:**\n")
+            f.write(f"**{t('code_changes', lang)}:**\n\n")
             for desc in data_out["changes"]:
-                f.write(f"  - {desc}\n")
+                if "\n" in desc:
+                    header, block = desc.split("\n", 1)
+                    f.write(f"- {header}\n{block}\n\n")
+                else:
+                    f.write(f"  - {desc}\n")
             f.write("\n")
 
         if data_out["actions"]:
