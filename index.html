@@ -406,11 +406,12 @@
     .dc-dim { color: #4a3f35; }
 
     /* ─── PARA QUIÉN ─── */
-    #audience { background: var(--bg-card); padding: 5rem 0; }
+    #audience { background: var(--bg-card); padding: 5rem 0; border-top: 2px solid var(--border-dark); }
     .audience-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
     .audience-item {
       display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem;
       padding: 2.25rem 2rem;
+      min-height: 220px;
       background: var(--bg); border-radius: 16px;
       border: 1px solid var(--border);
       box-shadow: 0 2px 12px rgba(28,23,17,0.06);
@@ -537,7 +538,7 @@
     .install-panel.active { display: block; }
 
     /* ─── FEATURES ─── */
-    #features { background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5rem 0; }
+    #features { background: var(--bg); border-top: 1px solid var(--border); padding: 5rem 0; }
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -548,6 +549,7 @@
       background: var(--bg-card); border: 1px solid var(--border);
       border-radius: 16px; padding: 2rem 1.75rem;
       display: flex; flex-direction: column; gap: .75rem;
+      min-height: 220px;
       position: relative; overflow: hidden;
       box-shadow: 0 2px 12px rgba(28,23,17,0.06);
       transition: box-shadow .3s, transform .3s;
