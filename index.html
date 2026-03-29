@@ -648,7 +648,10 @@
       .term-body { font-size: .72rem; height: 270px; overflow-x: auto; }
 
       /* STATS */
-      .stat-item { padding: .5rem 1rem; }
+      .stats-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+      .stat-item { padding: .6rem 1.25rem; border-bottom: 1px solid var(--border); }
+      .stat-item:nth-child(odd) { border-right: 1px solid var(--border); }
+      .stat-item + .stat-item::before { display: none; }
 
       /* PROBLEM */
       .problem-grid { grid-template-columns: 1fr; }
@@ -681,8 +684,10 @@
     }
 
     @media (max-width: 480px) {
-      /* STATS */
-      .stats-inner { flex-direction: column; align-items: flex-start; padding: 0 1.5rem; }
+      /* STATS: 2x2 grid */
+      .stats-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; }
+      .stat-item { padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
+      .stat-item:nth-child(odd) { border-right: 1px solid var(--border); }
       .stat-item + .stat-item::before { display: none; }
 
       /* FEATURES: 1 column */
