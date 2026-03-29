@@ -38,7 +38,7 @@
       --accent-grad:  linear-gradient(135deg, #c96442, #a84e30);
     }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 68px; }
 
     body {
       font-family: 'Inter', sans-serif;
@@ -1169,7 +1169,7 @@
 </footer>
 
 <!-- ─── STICKY CTA ─── -->
-<button class="sticky-cta" id="sticky-cta" onclick="document.getElementById('install').scrollIntoView({behavior:'smooth'})">
+<button class="sticky-cta" id="sticky-cta" onclick="const t=document.getElementById('install');window.scrollTo({top:t.getBoundingClientRect().top+scrollY-68,behavior:'smooth'})">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3l3.293 3.293-7 7 1.414 1.414 7-7L21 11V3z"/><path d="M19 19H5V5h7l-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7l-2-2v9z"/></svg>
   <span data-i18n="sticky_cta">Instalar</span>
 </button>
@@ -1450,11 +1450,11 @@
 
   itabUnix.addEventListener('click', () => {
     itabUnix.classList.add('active'); itabWin.classList.remove('active');
-    ipanelUnix.classList.add('active'); ipanelWin.classList.remove('active');
+    ipanelUnix.classList.add('active', 'visible'); ipanelWin.classList.remove('active');
   });
   itabWin.addEventListener('click', () => {
     itabWin.classList.add('active'); itabUnix.classList.remove('active');
-    ipanelWin.classList.add('active'); ipanelUnix.classList.remove('active');
+    ipanelWin.classList.add('active', 'visible'); ipanelUnix.classList.remove('active');
   });
 
   /* ─── COPY BUTTONS ─── */
@@ -1507,10 +1507,14 @@
   /* ─── SMOOTH SCROLL FOR ALL ANCHOR LINKS ─── */
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
+      const href = a.getAttribute('href');
+      if (!href || href === '#') return;
+      const target = document.querySelector(href);
       if (target) {
         e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth' });
+        const navOffset = 68;
+        const top = target.getBoundingClientRect().top + window.scrollY - navOffset;
+        window.scrollTo({ top, behavior: 'smooth' });
         mobileMenu.classList.remove('open');
       }
     });
