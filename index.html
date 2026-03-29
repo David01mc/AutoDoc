@@ -517,6 +517,7 @@
       padding: 1.1rem 1.4rem;
       font-family: 'JetBrains Mono', monospace; font-size: .82rem;
       line-height: 1.75; color: var(--text-code);
+      overflow-x: auto; white-space: pre-wrap; word-break: break-all;
     }
     .code-block-body .cmd-comment { color: #9ca3af; }
     .code-block-body .cmd-dollar { color: var(--accent); }
@@ -631,20 +632,79 @@
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
+      /* NAV */
       nav { padding: 0 1.25rem; }
       .nav-links, .nav-github { display: none; }
       .hamburger { display: block; }
+
+      /* SECTIONS */
+      section { padding: 3.5rem 1.25rem; }
+      .section-title { margin-bottom: 1.75rem; }
+
+      /* HERO */
+      .hero-ctas { flex-direction: column; align-items: center; }
+      .hero-ctas .btn-primary, .hero-ctas .btn-ghost { width: 100%; justify-content: center; }
+      .terminal-wrap { border-radius: 10px; }
+      .term-body { font-size: .72rem; height: 270px; overflow-x: auto; }
+
+      /* STATS */
+      .stat-item { padding: .5rem 1rem; }
+
+      /* PROBLEM */
       .problem-grid { grid-template-columns: 1fr; }
+      .editor-body { font-size: .72rem; padding: 1rem; }
+
+      /* HOW IT WORKS */
       .flow-diagram { flex-direction: column; gap: .5rem; }
       .flow-arrow { transform: rotate(90deg); }
       .annotation { display: none; }
-      .stat-item { padding: .5rem 1rem; }
-      section { padding: 4rem 1.25rem; }
-      .hero-ctas { flex-direction: column; align-items: center; }
+
+      /* DEMO */
+      .demo-editor-body { font-size: .72rem; min-height: 200px; }
+      .demo-code { padding: 1rem; }
+      .demo-header { flex-direction: column; align-items: flex-start; }
+      .btn-sim { width: 100%; justify-content: center; }
+
+      /* FEATURES */
+      .features-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .feature-card { padding: 1.5rem 1.25rem; min-height: 180px; }
+
+      /* AUDIENCE */
+      .audience-list { grid-template-columns: 1fr; }
+
+      /* CONFIG */
+      .config-body { font-size: .72rem; padding: 1rem; }
+
+      /* INSTALL */
+      .code-block-body { font-size: .72rem; padding: .85rem 1rem; }
+      .accordion-header { font-size: .85rem; }
     }
+
     @media (max-width: 480px) {
+      /* STATS */
       .stats-inner { flex-direction: column; align-items: flex-start; padding: 0 1.5rem; }
       .stat-item + .stat-item::before { display: none; }
+
+      /* FEATURES: 1 column */
+      .features-grid { grid-template-columns: 1fr; }
+
+      /* TERMINAL HERO */
+      .term-body { font-size: .65rem; height: 250px; }
+      .term-title { font-size: .68rem; }
+
+      /* DEMO: hide line numbers to save space */
+      .line-numbers { display: none; }
+      .demo-code { padding: .85rem 1rem; }
+      .demo-editor-body { font-size: .68rem; }
+
+      /* CONFIG */
+      .config-body { font-size: .65rem; padding: .85rem; }
+
+      /* INSTALL CODE BLOCKS */
+      .code-block-body { font-size: .65rem; padding: .75rem .85rem; }
+
+      /* PROBLEM EDITORS */
+      .editor-body { font-size: .65rem; }
     }
   </style>
 </head>
@@ -1169,7 +1229,7 @@
 </footer>
 
 <!-- ─── STICKY CTA ─── -->
-<button class="sticky-cta" id="sticky-cta" onclick="const t=document.getElementById('install');window.scrollTo({top:t.getBoundingClientRect().top+scrollY-68,behavior:'smooth'})">
+<button class="sticky-cta" id="sticky-cta">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3l3.293 3.293-7 7 1.414 1.414 7-7L21 11V3z"/><path d="M19 19H5V5h7l-2-2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7l-2-2v9z"/></svg>
   <span data-i18n="sticky_cta">Instalar</span>
 </button>
@@ -1322,6 +1382,11 @@
   const navInstallBtn = document.getElementById('nav-install-btn');
   const heroSection = document.getElementById('hero');
   const stickyCta = document.getElementById('sticky-cta');
+
+  stickyCta.addEventListener('click', () => {
+    const t = document.getElementById('install');
+    window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 68, behavior: 'smooth' });
+  });
 
   const heroObserver = new IntersectionObserver(([entry]) => {
     const visible = !entry.isIntersecting;
