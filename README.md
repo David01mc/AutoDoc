@@ -2,7 +2,7 @@
 
 > Documentación automática sin tokens extra para cada sesión de Claude Code.
 
-[![GitHub](https://img.shields.io/badge/GitHub-David01mc%2Fautodo-blue)](https://github.com/David01mc/autodoc)
+[![GitHub](https://img.shields.io/badge/GitHub-David01mc%2Fautodoc-blue)](https://github.com/David01mc/autodoc)
 
 AutoDoc se engancha al evento `Stop` de Claude Code para registrar silenciosamente lo que se hizo tras cada respuesta — sin tokens adicionales, sin esfuerzo manual. Al final del día, un comando genera el resumen completo de traspaso listo para el siguiente desarrollador.
 
