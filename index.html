@@ -483,6 +483,38 @@
       border-right-color: var(--border);
     }
 
+    /* ─── PROMPT TIP ─── */
+    #prompt { background: var(--bg-card); }
+    .prompt-wrap { max-width: 700px; margin: 0 auto; }
+    .prompt-intro {
+      text-align: center; margin-bottom: 2rem;
+      color: var(--text-muted); font-size: .95rem; line-height: 1.7;
+    }
+    .prompt-intro strong { color: var(--text); }
+    .prompt-steps {
+      display: flex; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap;
+    }
+    .prompt-step {
+      flex: 1; min-width: 180px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.2rem;
+      display: flex; align-items: flex-start; gap: .75rem;
+    }
+    .prompt-step-num {
+      background: var(--accent-grad); color: #fff;
+      border-radius: 50%; width: 24px; height: 24px; min-width: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; margin-top: 2px;
+    }
+    .prompt-step-text { font-size: .85rem; color: var(--text-muted); line-height: 1.5; }
+    .prompt-step-text strong { color: var(--text); display: block; margin-bottom: .2rem; }
+    .prompt-note {
+      margin-top: 1.25rem; padding: .9rem 1.1rem;
+      background: var(--accent-light); border: 1px solid rgba(201,100,66,0.25);
+      border-radius: 8px; font-size: .83rem; color: var(--text-muted); line-height: 1.6;
+    }
+    .prompt-note strong { color: var(--accent); }
+
     /* ─── INSTALACIÓN ─── */
     #install { background: var(--bg-card); }
     .install-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; justify-content: center; }
@@ -1111,6 +1143,54 @@
   </div>
 </section>
 
+<!-- ─── PROMPT TIP ─── -->
+<section id="prompt">
+  <div class="container">
+    <h2 class="section-title fade-in" data-i18n="prompt_title">Documentación aún más rica</h2>
+    <div class="prompt-wrap fade-in">
+      <p class="prompt-intro" data-i18n="prompt_intro">
+        Añade esta instrucción personalizada a Claude y el hook capturará un bloque estructurado al final de cada respuesta.
+        El diario pasará de <strong>heurístico</strong> a <strong>determinista</strong>.
+      </p>
+
+      <div class="prompt-steps">
+        <div class="prompt-step">
+          <div class="prompt-step-num">1</div>
+          <div class="prompt-step-text">
+            <strong data-i18n="prompt_step1_title">Settings → Custom instructions</strong>
+            <span data-i18n="prompt_step1_desc">Abre Claude Code y pega el prompt en las instrucciones personalizadas.</span>
+          </div>
+        </div>
+        <div class="prompt-step">
+          <div class="prompt-step-num">2</div>
+          <div class="prompt-step-text">
+            <strong data-i18n="prompt_step2_title">O en CLAUDE.md</strong>
+            <span data-i18n="prompt_step2_desc">Colócalo en la raíz de tu proyecto para que aplique solo a ese repositorio.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-editor">
+        <div class="config-bar">
+          <span class="config-title" data-i18n="prompt_file_label">instrucción personalizada</span>
+          <button class="btn-copy-config" id="btn-copy-prompt" data-i18n="config_copy">Copiar</button>
+        </div>
+        <div class="config-body" id="prompt-body" style="white-space: pre-wrap;">Al final de cada respuesta, incluye un bloque con este formato exacto:
+
+<span class="cfg-comment">## Resumen de la respuesta</span>
+<span class="cfg-key">- **Qué se hizo:**</span> <span class="cfg-val">[descripción breve de la acción principal]</span>
+<span class="cfg-key">- **Archivos afectados:**</span> <span class="cfg-val">[archivos creados o modificados, o "ninguno"]</span>
+<span class="cfg-key">- **Próximo paso sugerido:**</span> <span class="cfg-val">[qué debería hacerse a continuación, o "ninguno"]</span></div>
+      </div>
+
+      <p class="prompt-note">
+        <strong data-i18n="prompt_note_label">Por qué funciona:</strong>
+        <span data-i18n="prompt_note_desc">AutoDoc analiza el texto de cada respuesta para extraer objetivo y resultado. Con este bloque fijo al final, la extracción es exacta en lugar de aproximada.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- ─── INSTALACIÓN ─── -->
 <section id="install">
   <div class="container">
@@ -1281,6 +1361,15 @@
       aud_3_desc: 'Contribuciones AI trazables. Historial de decisiones automatizado.',
       config_title: 'Configura en segundos',
       config_copy: 'Copiar config',
+      prompt_title: 'Documentación aún más rica',
+      prompt_intro: 'Añade esta instrucción personalizada a Claude y el hook capturará un bloque estructurado al final de cada respuesta. El diario pasará de <strong>heurístico</strong> a <strong>determinista</strong>.',
+      prompt_step1_title: 'Settings → Custom instructions',
+      prompt_step1_desc: 'Abre Claude Code y pega el prompt en las instrucciones personalizadas.',
+      prompt_step2_title: 'O en CLAUDE.md',
+      prompt_step2_desc: 'Colócalo en la raíz de tu proyecto para que aplique solo a ese repositorio.',
+      prompt_file_label: 'instrucción personalizada',
+      prompt_note_label: 'Por qué funciona:',
+      prompt_note_desc: 'AutoDoc analiza el texto de cada respuesta para extraer objetivo y resultado. Con este bloque fijo al final, la extracción es exacta en lugar de aproximada.',
       install_title: 'Listo en 60 segundos',
       install_tab_unix: 'macOS / Linux',
       install_tab_win: 'Windows',
@@ -1338,6 +1427,15 @@
       aud_3_desc: 'Traceable AI contributions. Automated decision history.',
       config_title: 'Configure in seconds',
       config_copy: 'Copy config',
+      prompt_title: 'Even richer documentation',
+      prompt_intro: 'Add this custom instruction to Claude and the hook will capture a structured block at the end of every response. The diary goes from <strong>heuristic</strong> to <strong>deterministic</strong>.',
+      prompt_step1_title: 'Settings → Custom instructions',
+      prompt_step1_desc: 'Open Claude Code and paste the prompt into the custom instructions.',
+      prompt_step2_title: 'Or in CLAUDE.md',
+      prompt_step2_desc: 'Place it at the root of your project so it only applies to that repository.',
+      prompt_file_label: 'custom instruction',
+      prompt_note_label: 'Why it works:',
+      prompt_note_desc: 'AutoDoc analyses each response to extract the objective and result. With this fixed block at the end, extraction is exact instead of approximate.',
       install_title: 'Ready in 60 seconds',
       install_tab_unix: 'macOS / Linux',
       install_tab_win: 'Windows',
@@ -1557,6 +1655,22 @@
       this.textContent = '✓ Copiado';
       setTimeout(() => {
         this.textContent = i18n[currentLang].config_copy || 'Copiar config';
+      }, 2000);
+    }).catch(() => {});
+  });
+
+  /* ─── COPY PROMPT ─── */
+  document.getElementById('btn-copy-prompt').addEventListener('click', function() {
+    const promptText = `Al final de cada respuesta, incluye un bloque con este formato exacto:
+
+## Resumen de la respuesta
+- **Qué se hizo:** [descripción breve de la acción principal]
+- **Archivos afectados:** [archivos creados o modificados, o "ninguno"]
+- **Próximo paso sugerido:** [qué debería hacerse a continuación, o "ninguno"]`;
+    navigator.clipboard.writeText(promptText).then(() => {
+      this.textContent = '✓ Copiado';
+      setTimeout(() => {
+        this.textContent = i18n[currentLang].config_copy || 'Copiar';
       }, 2000);
     }).catch(() => {});
   });
