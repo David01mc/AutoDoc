@@ -178,6 +178,27 @@ AutoDoc extrae nombres de funciones y clases de:
 
 ---
 
+## Consejo: instrucción personalizada para documentación más rica
+
+AutoDoc captura la salida de terminal de cada respuesta. Cuanto más estructurada sea esa salida, más rico será el diario generado.
+
+Añade esta instrucción en la **personalización de Claude** (Settings → Custom instructions o en tu `CLAUDE.md`). El ejemplo completo está en [`Claude_Scripts/custom_instructions_example.md`](Claude_Scripts/custom_instructions_example.md):
+
+```
+Al final de cada respuesta, incluye un bloque de resumen con este formato exacto:
+
+## Resumen de la respuesta
+- **Qué se hizo:** [descripción breve de la acción principal]
+- **Archivos afectados:** [lista de archivos creados o modificados, o "ninguno"]
+- **Próximo paso sugerido:** [qué debería hacerse a continuación, o "ninguno"]
+```
+
+Cuando el hook `Stop` capture esta salida, `log_activity.py` dispondrá de una señal estructurada y el diario resultante incluirá automáticamente objetivos, resultados y archivos con mayor precisión — sin ningún esfuerzo adicional.
+
+> **Por qué funciona:** AutoDoc analiza el texto de la respuesta para extraer el objetivo y el resultado. Si Claude siempre escribe esa sección al final, la extracción es determinista en lugar de heurística.
+
+---
+
 ## ¿Por qué AutoDoc?
 
 Todo programador sabe que la documentación es importante. Nadie quiere escribirla.
